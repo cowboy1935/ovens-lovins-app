@@ -1,0 +1,282 @@
+/* --------------------------
+   GLOBAL
+--------------------------- */
+body {
+    margin: 0;
+    padding: 0;
+    background: #0f0f0f;
+    color: #f2f2f2;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+h1,
+h2,
+h3 {
+    margin: 0 0 12px 0;
+    font-weight: 700;
+    color: #f5c236;
+    /* Gold */
+}
+
+.page-title {
+    padding: 15px 20px;
+    font-size: 1.9rem;
+}
+
+/* --------------------------
+   NAVIGATION BUTTON BAR
+--------------------------- */
+.nav-container {
+    display: flex;
+    gap: 10px;
+    padding: 15px;
+    background: #000;
+    border-bottom: 1px solid #222;
+    overflow-x: auto;
+}
+
+.nav-btn {
+    background: #f5c236;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    color: #111;
+    white-space: nowrap;
+    transition: 0.2s;
+}
+
+.nav-btn:hover {
+    background: #ffdd55;
+    transform: translateY(-2px);
+}
+
+#continue-btn {
+    background: #ffb04a;
+}
+
+/* --------------------------
+   FILTER BAR
+--------------------------- */
+.filter-bar {
+    display: flex;
+    gap: 10px;
+    padding: 10px 15px;
+}
+
+select,
+input[type="text"] {
+    background: #1e1e1e;
+    border: 1px solid #333;
+    color: #eee;
+    padding: 10px;
+    border-radius: 8px;
+    flex: 1;
+    font-size: 1rem;
+}
+
+select:focus,
+input:focus {
+    outline: none;
+    border-color: #f5c236;
+}
+
+/* --------------------------
+   RECIPE CARDS
+--------------------------- */
+.recipe-card {
+    background: #151515;
+    margin: 12px;
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid #242424;
+    cursor: pointer;
+    transition: background 0.2s, border 0.2s;
+}
+
+.recipe-card:hover {
+    background: #1d1d1d;
+    border-color: #f5c236;
+}
+
+.recipe-card h3 {
+    margin-bottom: 8px;
+    font-size: 1.2rem;
+    color: #ffd873;
+}
+
+/* --------------------------
+   TAGS
+--------------------------- */
+.tags {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.tag {
+    background: #333;
+    color: #ddd;
+    padding: 3px 9px;
+    font-size: 0.8rem;
+    border-radius: 20px;
+}
+
+/* Gold heart vs white heart */
+.fav-heart {
+    font-size: 1.3rem;
+}
+
+.fav-heart.off {
+    opacity: 0.35;
+}
+
+/* --------------------------
+   BUTTON STYLES (General)
+--------------------------- */
+.btn {
+    display: inline-block;
+    text-align: center;
+    background: #f5c236;
+    color: #111;
+    padding: 12px 16px;
+    border-radius: 10px;
+    border: none;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: 0.2s;
+}
+
+.btn:hover {
+    background: #ffdd55;
+    transform: translateY(-2px);
+}
+
+/* --------------------------
+   GROCERY LIST
+--------------------------- */
+.grocery-card {
+    background: #141414;
+    border: 1px solid #222;
+    padding: 12px;
+    border-radius: 10px;
+    margin: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.grocery-card.checked {
+    opacity: 0.4;
+    text-decoration: line-through;
+}
+
+.grocery-btn {
+    background: #ff8a47;
+    border: none;
+    padding: 8px 10px;
+    font-size: 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-left: 6px;
+}
+
+.grocery-btn:hover {
+    background: #ff9f6a;
+}
+
+/* --------------------------
+   SHOPPING MODE TOGGLE
+--------------------------- */
+.shopping-mode-on {
+    background: #58c45c !important;
+}
+
+/* --------------------------
+   INPUT FIELDS
+--------------------------- */
+input[type="text"],
+input[type="number"] {
+    width: 100%;
+    background: #1c1c1c;
+    border: 1px solid #333;
+    padding: 10px;
+    border-radius: 10px;
+    font-size: 1rem;
+    color: #ddd;
+}
+
+input:focus {
+    border-color: #f5c236;
+    outline: none;
+}
+
+/* --------------------------
+   RESPONSIVE
+--------------------------- */
+@media (max-width: 600px) {
+    .nav-container {
+        flex-wrap: nowrap;
+        overflow-x: scroll;
+    }
+
+    .recipe-card {
+        margin: 10px 8px;
+        padding: 12px;
+    }
+
+    .filter-bar {
+        flex-direction: column;
+    }
+}
+
+.photo-dropzone {
+    border: 2px dashed #555;
+    padding: 20px;
+    border-radius: 12px;
+    background: #181818;
+    text-align: center;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.photo-dropzone.dragging {
+    border-color: #f5c236;
+    background: #222;
+}
+
+.caption-input {
+    width: 100%;
+    padding: 10px;
+    background: #1b1b1b;
+    border: 1px solid #333;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    color: #ddd;
+}
+
+.photo-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+.photo-card {
+    background: #151515;
+    padding: 10px;
+    border-radius: 12px;
+    border: 1px solid #333;
+    text-align: center;
+}
+
+.photo-card img {
+    width: 100%;
+    border-radius: 8px;
+    margin-bottom: 8px;
+}

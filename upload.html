@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#111111" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
+    <link rel="stylesheet" href="css/app.css">
+    <title>Add New Recipe</title>
+
+    <style>
+        body {
+            background: #111;
+            color: #eee;
+            font-family: system-ui, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            margin-top: 0;
+            color: #f4c430;
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input,
+        select,
+        textarea {
+            width: 100%;
+            padding: 8px;
+            background: #1c1c1c;
+            border: 1px solid #333;
+            color: #eee;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+
+        .ingredient-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .ingredient-row input {
+            flex: 1;
+        }
+
+        button {
+            padding: 12px;
+            background: #f4c430;
+            color: #111;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            width: 100%;
+            margin-top: 15px;
+            cursor: pointer;
+        }
+
+        .small-btn {
+            padding: 6px 10px;
+            font-size: 0.8rem;
+            background: #ff7f50;
+            width: auto;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="nav-bar">
+        <button onclick="window.location.href='index.html'">Home</button>
+        <button onclick="window.location.href='upload.html'">Add Recipe</button>
+        <button onclick="window.location.href='index.html#favorites'">Favorites</button>
+    </div>
+
+    <style>
+        .nav-bar {
+            display: flex;
+            gap: 10px;
+            padding: 10px;
+            background: #000;
+            border-bottom: 1px solid #333;
+            margin-bottom: 20px;
+        }
+
+        .nav-bar button {
+            padding: 10px;
+            background: #f4c430;
+            font-weight: bold;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+    </style>
+
+    <h1>Add a New Recipe</h1>
+
+    <label>Title</label>
+    <input id="title" type="text" placeholder="Recipe title">
+
+    <label>Category</label>
+    <select id="category">
+        <option value="">Choose Category</option>
+        <option>Chicken</option>
+        <option>Beef</option>
+        <option>Pasta</option>
+        <option>Seafood</option>
+        <option>Holiday</option>
+        <option>Party</option>
+        <option>Dessert</option>
+    </select>
+
+    <label>Meal Type</label>
+    <select id="meal_type">
+        <option value="">Choose Meal Type</option>
+        <option>Breakfast</option>
+        <option>Lunch</option>
+        <option>Dinner</option>
+        <option>Dessert</option>
+        <option>Snack</option>
+    </select>
+
+    <label>Recipe Type</label>
+    <select id="source_type">
+        <option value="user">User Recipe</option>
+        <option value="chef">Chef-Style</option>
+        <option value="budget">Budget Version</option>
+    </select>
+
+    <label>Base Recipe ID (only if this is a budget version)</label>
+    <input id="base_recipe_id" type="number" placeholder="Leave blank unless linking to a chef recipe">
+
+    <h2>Ingredients</h2>
+
+    <div id="ingredients"></div>
+
+    <button class="small-btn" onclick="addIngredientRow()">+ Add Ingredient</button>
+
+    <label>Preparation Instructions</label>
+    <textarea id="prep_instructions" rows="4"></textarea>
+
+    <label>Cooking Instructions</label>
+    <textarea id="cook_instructions" rows="4"></textarea>
+
+    <button onclick="submitRecipe()">Submit Recipe</button>
+
+    <script src="js/api.js"></script>
+    <script>
+        function addIngredientRow() {
+            const container = document.getElementById("ingredients");
+
+            const row = document.createElement("div");
+            row.className = "ingredient-row";
+
+            row.innerHTML = `
+                <input type="text" placeholder="Ingredient name" class="ing-name">
+                <input type="text" placeholder="Qty" class="ing-qty" style="max-width:80px;">
+                <input type="text" placeholder="Unit" class="ing-unit" style="max-width:80px;">
+                <button class="small-btn" onclick="this.parentNode.remove()">X</button>
+            `;
+
+            container.appendChild(row);
+        }
+
+        async function submitRecipe() {
+            const ingredients = [];
+
+            document.querySelectorAll(".ingredient-row").forEach(row => {
+                const name = row.querySelector(".ing-name").value.trim();
+                const quantity = row.querySelector(".ing-qty").value.trim();
+                const unit = row.querySelector(".ing-unit").value.trim();
+
+                if (name) {
+                    ingredients.push({ name, quantity, unit });
+                }
+            });
+
+            const payload = {
+                title: document.getElementById("title").value.trim(),
+                meal_type: document.getElementById("meal_type").value,
+                category: document.getElementById("category").value,
+                source_type: document.getElementById("source_type").value,
+                base_recipe_id: document.getElementById("base_recipe_id").value || null,
+                prep_instructions: document.getElementById("prep_instructions").value,
+                cook_instructions: document.getElementById("cook_instructions").value,
+                ingredients
+            };
+
+            const res = await fetch({
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                alert("Recipe added!");
+                window.location.href = "index.html";
+            } else {
+                const err = await res.json();
+                alert("Error: " + (err.detail ?? "Unknown error"));
+            }
+        }
+
+        // Add first empty ingredient row on page load
+        addIngredientRow();
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Grocery List</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#111111" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/app.css" />
+</head>
+
+<body>
+
+    <!-- NAVIGATION BAR -->
+    <div class="nav-container">
+        <button class="nav-btn" onclick="window.location.href='index.html'">Home</button>
+        <button class="nav-btn" onclick="window.location.href='upload.html'">Add Recipe</button>
+        <button class="nav-btn" onclick="window.location.href='index.html#favorites'">Favorites</button>
+        <button class="nav-btn" onclick="window.location.href='grocery.html'">Grocery List</button>
+    </div>
+
+    <h1 class="page-title">My Grocery List</h1>
+
+    <!-- INPUT FORM -->
+    <div class="form-section">
+        <label>Item name:</label>
+        <input id="grocery-name" type="text" placeholder="Tomatoes, Chicken, Milk…" />
+
+        <label>Quantity:</label>
+        <input id="grocery-qty" type="text" placeholder="e.g., 2, 1½, dozen" />
+
+        <label>Unit:</label>
+        <input id="grocery-unit" type="text" placeholder="lb, pcs, cup…" />
+
+        <button class="btn" onclick="addItem()">Add Item</button>
+    </div>
+
+    <!-- SHOPPING MODE + CLEAR COMPLETED -->
+    <div class="filter-bar">
+        <button id="shopping-mode-btn" class="btn btn-secondary" onclick="toggleShoppingMode()">
+            Shopping Mode: OFF
+        </button>
+        <button class="btn btn-secondary" onclick="clearCompleted()">Clear Completed</button>
+    </div>
+
+    <!-- CATEGORY SLIDER -->
+    <h2>Categories</h2>
+    <div id="category-slider" class="category-slider"></div>
+
+    <!-- CATEGORY LIST -->
+    <h2>Items</h2>
+    <div id="grocery-list"></div>
+
+    <script src="js/api.js"></script>
+
+    <!-- GROCERY PAGE LOGIC -->
+    <script>
+        let shoppingMode = false;
+        let activeCategory = null; // which slider card is active
+
+        // SMART CATEGORY DETECTION
+        function getCategoryForName(name) {
+            const n = name.toLowerCase();
+
+            if (/(lettuce|tomato|onion|pepper|carrot|apple|banana|spinach|potato|broccoli|cucumber|cilantro|parsley|avocado|lime|lemon)/.test(n))
+                return "Produce";
+
+            if (/(milk|cheese|butter|yogurt|cream|sour cream|egg)/.test(n))
+                return "Dairy";
+
+            if (/(beef|chicken|pork|turkey|sausage|bacon|ham|steak|ground|shrimp|fish|salmon)/.test(n))
+                return "Meat & Seafood";
+
+            if (/(rice|pasta|flour|sugar|salt|oil|bread|tortilla|beans|cereal|oats|noodle)/.test(n))
+                return "Pantry";
+
+            if (/(chip|cracker|cookie|snack|candy|chocolate|granola)/.test(n))
+                return "Snacks";
+
+            if (/(ice cream|frozen|pizza|fries|nugget)/.test(n))
+                return "Frozen";
+
+            if (/(water|soda|juice|coffee|tea|beer|wine|drink)/.test(n))
+                return "Drinks";
+
+            if (/(towel|soap|detergent|trash bag|foil|wrap|cleaner|sponge|paper towel|toilet paper)/.test(n))
+                return "Household";
+
+            if (/(paprika|cumin|garlic powder|onion powder|oregano|basil|chili|peppercorn|cinnamon|clove|turmeric|thyme|rosemary)/.test(n))
+                return "Spices & Seasonings";
+
+            return "Other";
+        }
+
+        function getCategoryClass(cat) {
+            return {
+                "Produce": "category-produce",
+                "Meat & Seafood": "category-meat",
+                "Dairy": "category-dairy",
+                "Pantry": "category-pantry",
+                "Snacks": "category-snacks",
+                "Frozen": "category-frozen",
+                "Drinks": "category-drinks",
+                "Household": "category-household",
+                "Spices & Seasonings": "category-spices"
+            }[cat] || "";
+        }
+
+        // MAIN GROCERY LOAD
+        async function loadList() {
+            const data = await window.api.getGroceryList();
+            const slider = document.getElementById("category-slider");
+            const list = document.getElementById("grocery-list");
+
+            slider.innerHTML = "";
+            list.innerHTML = "";
+
+            if (!data.length) {
+                list.innerHTML = "<p style='color:#777'>Your grocery list is empty.</p>";
+                return;
+            }
+
+            // Build category groups
+            const buckets = {};
+            data.forEach(item => {
+                const cat = getCategoryForName(item.ingredient_name);
+                if (!buckets[cat]) buckets[cat] = [];
+                buckets[cat].push(item);
+            });
+
+            const order = [
+                "Produce",
+                "Meat & Seafood",
+                "Dairy",
+                "Pantry",
+                "Snacks",
+                "Frozen",
+                "Drinks",
+                "Spices & Seasonings",
+                "Household",
+                "Other"
+            ];
+
+            // BUILD SLIDER CARDS
+            order.forEach(cat => {
+                const items = buckets[cat];
+                if (!items) return;
+
+                const unchecked = items.filter(i => !i.checked).length;
+
+                const card = document.createElement("div");
+                card.className = "category-card " + getCategoryClass(cat);
+
+                if (!activeCategory || activeCategory === cat)
+                    card.classList.add("active");
+
+                card.innerHTML = `
+          <div class="category-card-title">${cat}</div>
+          <div class="category-card-sub">${unchecked} to get / ${items.length} total</div>
+        `;
+
+                card.addEventListener("click", () => {
+                    activeCategory = activeCategory === cat ? null : cat;
+                    loadList();
+                });
+
+                slider.appendChild(card);
+            });
+
+            // CATEGORY BOARDS
+            order.forEach(cat => {
+                const items = buckets[cat];
+                if (!items || (activeCategory && activeCategory !== cat)) return;
+
+                items.sort((a, b) => {
+                    if (a.checked && !b.checked) return 1;
+                    if (!a.checked && b.checked) return -1;
+                    return a.ingredient_name.localeCompare(b.ingredient_name);
+                });
+
+                const block = document.createElement("div");
+                block.className = "category-block " + getCategoryClass(cat);
+
+                const header = document.createElement("div");
+                header.className = "category-header";
+
+                header.innerHTML = `
+          <div class="category-title">
+            <span>${cat}</span>
+            <span>${items.filter(i => !i.checked).length} item(s) to get</span>
+          </div>
+          <div class="category-toggle">Hide</div>
+        `;
+
+                const body = document.createElement("div");
+                body.className = "category-body";
+
+                // ITEMS
+                items.forEach(item => {
+                    const div = document.createElement("div");
+                    div.className = "grocery-card";
+                    if (item.checked) div.classList.add("checked");
+
+                    // Swipe gestures
+                    let startX = null;
+
+                    div.addEventListener("touchstart", e => {
+                        startX = e.touches[0].clientX;
+                    });
+
+                    div.addEventListener("touchend", e => {
+                        if (startX === null) return;
+                        const delta = e.changedTouches[0].clientX - startX;
+                        if (delta > 60) checkItem(item.id);     // swipe right
+                        if (delta < -60) deleteItem(item.id);   // swipe left
+                        startX = null;
+                    });
+
+                    div.innerHTML = `
+            <span>${item.ingredient_name} 
+                ${item.quantity ? " - " + item.quantity : ""}
+                ${item.unit ? " " + item.unit : ""}
+            </span>
+            <div>
+              <button class="grocery-btn" onclick="checkItem(${item.id})">✔</button>
+              <button class="grocery-btn" onclick="deleteItem(${item.id})">X</button>
+            </div>
+          `;
+
+                    body.appendChild(div);
+                });
+
+                header.addEventListener("click", () => {
+                    const hidden = body.style.display === "none";
+                    body.style.display = hidden ? "block" : "none";
+                    header.querySelector(".category-toggle").textContent = hidden ? "Hide" : "Show";
+                });
+
+                block.appendChild(header);
+                block.appendChild(body);
+                list.appendChild(block);
+            });
+
+            document.body.classList.toggle("shopping-mode-on", shoppingMode);
+        }
+
+        // ADD ITEM
+        async function addItem() {
+            const name = document.getElementById("grocery-name").value.trim();
+            const qty = document.getElementById("grocery-qty").value.trim();
+            const unit = document.getElementById("grocery-unit").value.trim();
+
+            if (!name) return alert("Enter an item.");
+
+            await fetch("/grocery", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    ingredient_name: name,
+                    quantity: qty || null,
+                    unit: unit || null
+                })
+            });
+
+            // Reset input boxes
+            document.getElementById("grocery-name").value = "";
+            document.getElementById("grocery-qty").value = "";
+            document.getElementById("grocery-unit").value = "";
+
+            loadList();
+        }
+
+
+        async function deleteItem(id) {
+            await fetch(`/grocery/delete/${id}`, { method: "DELETE" });
+            loadList();
+        }
+
+        async function checkItem(id) {
+            await fetch(`/grocery/check/${id}`, { method: "POST" });
+            loadList();
+        }
+
+        async function clearCompleted() {
+            const data = await window.api.getGroceryList();
+            for (const item of data.filter(i => i.checked)) {
+                await fetch(`/grocery/delete/${item.id}`, { method: "DELETE" });
+            }
+            loadList();
+        }
+
+        function toggleShoppingMode() {
+            shoppingMode = !shoppingMode;
+            document.getElementById("shopping-mode-btn").textContent =
+                `Shopping Mode: ${shoppingMode ? "ON" : "OFF"}`;
+            loadList();
+        }
+
+        loadList();
+    </script>
+
+    <!-- SERVICE WORKER -->
+    <script>
+        if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.register("service-worker.js");
+        }
+    </script>
+
+</body>
+
+</html>

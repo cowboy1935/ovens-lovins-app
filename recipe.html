@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Recipe Details</title>
+
+    <!-- Manifest + Icons -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+    <!-- Global Styles -->
+    <link rel="stylesheet" href="css/app.css">
+</head>
+
+<body>
+
+    <!-- TOP NAV -->
+    <header class="top-nav">
+        <button onclick="window.location.href='index.html'">Home</button>
+        <button onclick="window.location.href='upload.html'">Add Recipe</button>
+        <button onclick="window.location.href='index.html#favorites'">Favorites</button>
+        <button onclick="window.location.href='grocery.html'">Grocery List</button>
+    </header>
+
+    <main class="page-container">
+
+        <!-- Recipe Title -->
+        <h1 id="title" class="recipe-title">Loading…</h1>
+
+        <!-- ACTION BUTTONS -->
+        <div class="action-row">
+            <button id="favorite-btn" class="btn" onclick="toggleFavorite()">❤️ Mark as Favorite</button>
+            <button id="version-btn" class="btn" onclick="toggleVersion()">Switch Version</button>
+        </div>
+
+        <!-- SECTIONS -->
+        <section>
+            <h2>Ingredients</h2>
+            <ul id="ingredients" class="ingredient-list"></ul>
+        </section>
+
+        <section>
+            <h2>Preparation</h2>
+            <p id="prep"></p>
+        </section>
+
+        <section>
+            <h2>Cooking</h2>
+            <p id="cook"></p>
+        </section>
+
+        <!-- PHOTO UPLOAD -->
+        <section>
+            <h2>Photos</h2>
+
+            <!-- DRAG & DROP UPLOAD ZONE -->
+            <div id="dropzone" class="photo-dropzone">
+                <p>Drop a photo here or click to choose.</p>
+                <input type="file" id="photo-upload" accept="image/*" style="display:none;">
+            </div>
+
+            <!-- CAPTION INPUT -->
+            <input type="text" id="photo-caption" class="caption-input" placeholder="Add a caption…">
+
+            <!-- UPLOAD BUTTON -->
+            <button id="upload-photo-btn" class="btn" onclick="uploadPhoto()">Upload Photo</button>
+
+            <!-- GALLERY -->
+            <div id="photo-gallery" class="photo-gallery"></div>
+        </section>
+
+    </main>
+
+    <!-- API Script -->
+    <script src="js/api.js"></script>
+
+    <!-- PAGE LOGIC -->
+    <script>
+        // Get recipe ID from URL
+        const recipeId = new URLSearchParams(window.location.search).get("id");
+
+        // Save last recipe for "Continue Recipe" feature on index
+        if (recipeId) {
+            localStorage.setItem("last_recipe_id", recipeId);
+        }
+
+        // Handle missing ID
+        if (!recipeId) {
+            document.getElementById("title").innerText = "Recipe Not Found";
+            disableAll();
+        }
+
+        function disableAll() {
+            const ids = ["favorite-btn", "version-btn", "photo-upload", "photo-caption", "upload-photo-btn"];
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.disabled = true;
+            });
+        }
+
+        // Load Recipe
+        async function loadRecipe() {
+            const recipe = await window.api.getRecipe(recipeId);
+
+            document.getElementById("title").innerText = recipe.title;
+
+            // INGREDIENTS
+            const ingList = document.getElementById("ingredients");
+            ingList.innerHTML = "";
+            recipe.ingredients.forEach(i => {
+                const qty = i.quantity ? i.quantity : "";
+                const unit = i.unit ? i.unit : "";
+                ingList.innerHTML += `<li>${qty} ${unit} ${i.name}</li>`;
+            });
+
+            // Instructions
+            document.getElementById("prep").innerText =
+                recipe.prep_instructions || "No preparation instructions provided.";
+
+            document.getElementById("cook").innerText =
+                recipe.cook_instructions || "No cooking instructions provided.";
+
+            // Favorite Button
+            updateFavoriteButton(recipe.is_favorite);
+
+            // Version Switching
+            const versionBtn = document.getElementById("version-btn");
+            if (recipe.source_type === "chef") {
+                versionBtn.innerText = recipe.linked_budget ? "View Budget Version" : "Budget Version Unavailable";
+                versionBtn.disabled = !recipe.linked_budget;
+            } else {
+                versionBtn.innerText = "View Chef Version";
+                versionBtn.disabled = !recipe.linked_chef;
+            }
+
+            // Photos
+            loadPhotos();
+        }
+
+        function updateFavoriteButton(isFav) {
+            const favBtn = document.getElementById("favorite-btn");
+            favBtn.innerHTML = isFav ? "💔 Remove Favorite" : "❤️ Mark as Favorite";
+        }
+
+        // Toggle Favorite
+        async function toggleFavorite() {
+            const recipe = await window.api.getRecipe(recipeId);
+
+            if (recipe.is_favorite) {
+                await fetch(`/unfavorite/${recipeId}`, { method: "POST" });
+                updateFavoriteButton(false);
+            } else {
+                await fetch(`/favorite/${recipeId}`, { method: "POST" });
+                updateFavoriteButton(true);
+            }
+        }
+
+        // Version Switching
+        async function toggleVersion() {
+            const recipe = await window.api.getRecipe(recipeId);
+
+            if (recipe.source_type === "chef" && recipe.linked_budget) {
+                window.location.href = `recipe.html?id=${recipe.linked_budget.id}`;
+            }
+            else if (recipe.source_type === "budget" && recipe.linked_chef) {
+                window.location.href = `recipe.html?id=${recipe.linked_chef.id}`;
+            }
+        }
+
+        // ---------- DRAG & DROP LOGIC ----------
+        const dropzone = document.getElementById("dropzone");
+        const fileInput = document.getElementById("photo-upload");
+        const captionInput = document.getElementById("photo-caption");
+        const gallery = document.getElementById("photo-gallery");
+
+        dropzone.addEventListener("click", () => fileInput.click());
+
+        dropzone.addEventListener("dragover", e => {
+            e.preventDefault();
+            dropzone.classList.add("dragging");
+        });
+
+        dropzone.addEventListener("dragleave", () => {
+            dropzone.classList.remove("dragging");
+        });
+
+        dropzone.addEventListener("drop", e => {
+            e.preventDefault();
+            dropzone.classList.remove("dragging");
+            if (e.dataTransfer.files.length > 0) {
+                fileInput.files = e.dataTransfer.files;
+            }
+        });
+
+        // ---------- UPLOAD PHOTO ----------
+        async function uploadPhoto() {
+            const file = fileInput.files[0];
+            const caption = captionInput.value;
+
+            if (!file) {
+                alert("Select or drop a photo first.");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("caption", caption);
+
+            const res = await fetch(`/recipe/${recipeId}/upload_image`, {
+                method: "POST",
+                body: formData
+            });
+
+            if (!res.ok) {
+                alert("Upload failed.");
+                return;
+            }
+
+            fileInput.value = "";
+            captionInput.value = "";
+            loadPhotos();
+        }
+
+        // ---------- LOAD IMAGES ----------
+        async function loadPhotos() {
+            const photos = await window.api.getRecipeImages(recipeId);
+            gallery.innerHTML = "";
+
+            if (!photos.length) {
+                gallery.innerHTML = "<p style='color:#777'>No photos uploaded yet.</p>";
+                return;
+            }
+
+            photos.forEach(p => {
+                const card = document.createElement("div");
+                card.className = "photo-card";
+
+                card.innerHTML = `
+                    <img src="${p.url}" alt="Recipe Photo">
+                    <p>${p.caption || ""}</p>
+                `;
+
+                gallery.appendChild(card);
+            });
+        }
+
+        // Initialize Page
+        if (recipeId) {
+            loadRecipe();
+        }
+
+    </script>
+
+    <!-- SERVICE WORKER -->
+    <script>
+        if ("serviceWorker" in navigator) {
+            window.addEventListener("load", () => {
+                navigator.serviceWorker.register("service-worker.js");
+            });
+        }
+    </script>
+
+</body>
+
+</html>

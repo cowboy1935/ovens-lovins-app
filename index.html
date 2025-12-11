@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chef Recipes</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#111111" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/app.css" />
+</head>
+
+<body>
+
+    <!-- -------------------- NAVIGATION -------------------- -->
+    <div class="nav-container">
+        <button class="nav-btn" onclick="window.location.href='index.html'">Home</button>
+        <button class="nav-btn" onclick="window.location.href='upload.html'">Add Recipe</button>
+        <button class="nav-btn" onclick="window.location.href='index.html#favorites'">Favorites</button>
+        <button class="nav-btn" onclick="window.location.href='grocery.html'">Grocery List</button>
+        <button id="continue-btn" class="nav-btn" style="display:none;">Continue Recipe</button>
+    </div>
+
+    <!-- -------------------- PAGE HEADER -------------------- -->
+    <h1 class="page-title">Chef Recipes</h1>
+
+    <!-- -------------------- FILTER BAR -------------------- -->
+    <div class="filter-bar">
+        <select id="mealTypeFilter" onchange="renderRecipes()">
+            <option value="">All Meals</option>
+            <option value="Breakfast">Breakfast</option>
+            <option value="Lunch">Lunch</option>
+            <option value="Dinner">Dinner</option>
+            <option value="Dessert">Dessert</option>
+            <option value="Snack">Snack</option>
+        </select>
+
+        <input id="searchBox" type="text" placeholder="Search…" oninput="renderRecipes()" />
+    </div>
+
+    <!-- -------------------- RECIPE RESULTS -------------------- -->
+    <div id="recipe-list"></div>
+
+    <!-- Load API logic -->
+    <script src="js/api.js"></script>
+
+    <script>
+        let allRecipes = [];
+
+        // -------------------- CONTINUE RECIPE BUTTON --------------------
+        function enableContinueButton() {
+            const last = localStorage.getItem("last_recipe_id");
+            if (last) {
+                const btn = document.getElementById("continue-btn");
+                btn.style.display = "inline-block";
+                btn.onclick = () => window.location.href = `recipe.html?id=${last}`;
+            }
+        }
+
+        // -------------------- LOAD ALL RECIPES --------------------
+        async function init() {
+            enableContinueButton();
+
+            try {
+                allRecipes = await window.api.getRecipes();
+                renderRecipes();
+            } catch (error) {
+                console.error(error);
+                document.getElementById("recipe-list").innerHTML =
+                    "<p style='color:#777'>Error loading recipes.</p>";
+            }
+        }
+
+        // -------------------- RENDER LIST --------------------
+        function renderRecipes() {
+            const mealType = document.getElementById("mealTypeFilter").value;
+            const search = document.getElementById("searchBox").value.toLowerCase();
+            const container = document.getElementById("recipe-list");
+
+            let filtered = allRecipes;
+
+            if (mealType) filtered = filtered.filter(r => r.meal_type === mealType);
+            if (search.trim()) filtered = filtered.filter(r =>
+                r.title.toLowerCase().includes(search)
+            );
+
+            container.innerHTML = "";
+
+            if (!filtered.length) {
+                container.innerHTML = "<p style='color:#777'>No recipes found.</p>";
+                return;
+            }
+
+            filtered.forEach(recipe => {
+                const div = document.createElement("div");
+                div.className = "recipe-card";
+                div.onclick = () => viewRecipe(recipe.id);
+
+                div.innerHTML = `
+                    <h3>${recipe.title}</h3>
+                    <div class="tags">
+                        ${recipe.meal_type ? `<span class="tag">${recipe.meal_type}</span>` : ""}
+                        ${recipe.category ? `<span class="tag">${recipe.category}</span>` : ""}
+                        <span class="tag">${recipe.source_type}</span>
+                        ${recipe.is_favorite ?
+                        `<span class="fav-heart">❤️</span>` :
+                        `<span class="fav-heart off">🤍</span>`}
+                    </div>
+                `;
+
+                container.appendChild(div);
+            });
+        }
+
+        function viewRecipe(id) {
+            window.location.href = `recipe.html?id=${id}`;
+        }
+
+        // Start application
+        init();
+
+        // -------------------- SERVICE WORKER --------------------
+        if ("serviceWorker" in navigator) {
+            window.addEventListener("load", () => {
+                navigator.serviceWorker.register("service-worker.js")
+                    .catch(err => console.error("SW failed:", err));
+            });
+        }
+    </script>
+
+</body>
+
+</html>

@@ -3,6 +3,8 @@
 # FINAL PRODUCTION VERSION
 # -----------------------------------------
 
+from datetime import datetime
+
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -43,6 +45,7 @@ def get_conn():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
 
 # -----------------------------------------
 # FASTAPI APP
@@ -165,7 +168,6 @@ class GroceryItemOut(GroceryItemIn):
     checked: bool = False
 
 
-
 # -----------------------------------------
 # FAVORITES
 # -----------------------------------------
@@ -194,7 +196,10 @@ def unfavorite(recipe_id: int):
 def get_favorites():
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("SELECT id, title, meal_type, category, source_type, is_favorite FROM recipes WHERE is_favorite = 1")
+    cur.execute(
+        "SELECT id, title, meal_type, category, source_type, is_favorite "
+        "FROM recipes WHERE is_favorite = 1"
+    )
     rows = cur.fetchall()
     conn.close()
 
@@ -253,14 +258,18 @@ def get_recipe(recipe_id: int):
     cur.execute("""SELECT * FROM recipes WHERE id = ?""", (recipe_id,))
     recipe = cur.fetchone()
     if not recipe:
+        conn.close()
         raise HTTPException(status_code=404, detail="Recipe not found")
 
-    cur.execute("""
+    cur.execute(
+        """
         SELECT ingredients.name, recipe_ingredients.quantity, recipe_ingredients.unit
         FROM recipe_ingredients
         JOIN ingredients ON ingredients.id = recipe_ingredients.ingredient_id
         WHERE recipe_id = ?
-    """, (recipe_id,))
+        """,
+        (recipe_id,)
+    )
     ingredients = [
         {"name": row["name"], "quantity": row["quantity"], "unit": row["unit"]}
         for row in cur.fetchall()
@@ -289,19 +298,17 @@ def get_recipe(recipe_id: int):
 # GROCERY LIST
 # -----------------------------------------
 
-class GroceryItemOut(GroceryItemIn):
-    id: int
-    checked: bool = False
-
 @app.get("/grocery/list", response_model=List[GroceryItemOut])
 def grocery_list():
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("""
+    cur.execute(
+        """
         SELECT id, ingredient_name, quantity, unit, checked
         FROM grocery_items
         ORDER BY id DESC
-    """)
+        """
+    )
     items = cur.fetchall()
     conn.close()
 
@@ -317,15 +324,65 @@ def grocery_list():
     ]
 
 
+@app.post("/grocery/add_from_recipe/{recipe_id}")
+def add_grocery_from_recipe(recipe_id: int):
+    """
+    Take all ingredients from a recipe and add them as grocery_items.
+    Uses ingredients.name + recipe_ingredients.quantity/unit.
+    """
+    conn = get_conn()
+    cur = conn.cursor()
+
+    # Make sure recipe exists
+    cur.execute("SELECT id, title FROM recipes WHERE id = ?", (recipe_id,))
+    recipe = cur.fetchone()
+    if not recipe:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Recipe not found")
+
+    # Pull ingredients for this recipe
+    cur.execute(
+        """
+        SELECT ingredients.name AS ingredient_name,
+               recipe_ingredients.quantity,
+               recipe_ingredients.unit
+        FROM recipe_ingredients
+        JOIN ingredients
+          ON ingredients.id = recipe_ingredients.ingredient_id
+        WHERE recipe_ingredients.recipe_id = ?
+        """,
+        (recipe_id,)
+    )
+    rows = cur.fetchall()
+
+    added = 0
+    for row in rows:
+        cur.execute(
+            """
+            INSERT INTO grocery_items (ingredient_name, quantity, unit)
+            VALUES (?, ?, ?)
+            """,
+            (row["ingredient_name"], row["quantity"], row["unit"])
+        )
+        added += 1
+
+    conn.commit()
+    conn.close()
+
+    return {"status": "ok", "recipe_id": recipe_id, "items_added": added}
+
 
 @app.post("/grocery", response_model=GroceryItemOut)
 def add_grocery(item: GroceryItemIn):
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("""
+    cur.execute(
+        """
         INSERT INTO grocery_items (ingredient_name, quantity, unit)
         VALUES (?, ?, ?)
-    """, (item.ingredient_name, item.quantity, item.unit))
+        """,
+        (item.ingredient_name, item.quantity, item.unit)
+    )
     item_id = cur.lastrowid
     conn.commit()
     conn.close()
@@ -356,8 +413,6 @@ def delete_item(item_id: int):
 # -----------------------------------------
 # IMAGE UPLOAD FOR RECIPES
 # -----------------------------------------
-
-from datetime import datetime
 
 # List images for a recipe
 @app.get("/recipe/{recipe_id}/images")
@@ -416,3 +471,4 @@ def delete_recipe_image(image_id: int):
 # -----------------------------------------
 # END OF FILE
 # -----------------------------------------
+

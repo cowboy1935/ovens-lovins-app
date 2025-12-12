@@ -1,3 +1,5 @@
+// service-worker.js
+
 const CACHE_NAME = "ovens-lovins-v1";
 const urlsToCache = [
     "/",
@@ -10,17 +12,13 @@ const urlsToCache = [
     "/manifest.json"
 ];
 
-// Install
 self.addEventListener("install", event => {
     event.waitUntil(
-        caches.open(CACHE_NAME).then(cache => {
-            return cache.addAll(urlsToCache);
-        })
+        caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
     );
     self.skipWaiting();
 });
 
-// Activate
 self.addEventListener("activate", event => {
     event.waitUntil(
         caches.keys().then(keys =>
@@ -34,16 +32,16 @@ self.addEventListener("activate", event => {
     self.clients.claim();
 });
 
-// Fetch
 self.addEventListener("fetch", event => {
+    // Don't mess with POST/PUT/etc. – let API calls go through normally
+    if (event.request.method !== "GET") {
+        return;
+    }
+
     event.respondWith(
-        caches.match(event.request).then(resp => {
-            return (
-                resp ||
-                fetch(event.request).then(fetchResp => {
-                    return fetchResp;
-                })
-            );
+        caches.match(event.request, { ignoreSearch: true }).then(resp => {
+            if (resp) return resp;
+            return fetch(event.request);
         })
     );
 });

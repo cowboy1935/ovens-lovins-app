@@ -4,15 +4,15 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Chef Recipes</title>
+    <title>Ovens Lovin’s – The Kitchen Helper</title>
 
     <!-- PWA -->
-    <link rel="manifest" href="manifest.json" />
+    <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#111111" />
-    <link rel="apple-touch-icon" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
 
     <!-- Styles -->
-    <link rel="stylesheet" href="css/app.css" />
+    <link rel="stylesheet" href="/css/app.css" />
 </head>
 
 <body>
@@ -47,7 +47,7 @@
     <div id="recipe-list"></div>
 
     <!-- Load API logic -->
-    <script src="js/api.js"></script>
+    <script src="/js/api.js"></script>
 
     <script>
         let allRecipes = [];
@@ -127,7 +127,8 @@
         // -------------------- SERVICE WORKER --------------------
         if ("serviceWorker" in navigator) {
             window.addEventListener("load", () => {
-                navigator.serviceWorker.register("service-worker.js")
+                navigator.serviceWorker
+                    .register("/service-worker.js")
                     .catch(err => console.error("SW failed:", err));
             });
         }

@@ -85,6 +85,35 @@ input:focus {
 }
 
 /* --------------------------
+   QUICK FILTER CHIPS
+--------------------------- */
+.quick-filters {
+    display: flex;
+    gap: 8px;
+    padding: 0 15px 10px;
+    overflow-x: auto;
+}
+
+.filter-chip {
+    border: 1px solid #444;
+    background: #181818;
+    color: #eee;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s, border-color 0.2s, transform 0.1s;
+}
+
+.filter-chip.active {
+    background: #f5c236;
+    color: #111;
+    border-color: #f5c236;
+    transform: translateY(-1px);
+}
+
+/* --------------------------
    RECIPE CARDS
 --------------------------- */
 .recipe-card {
@@ -168,7 +197,22 @@ input:focus {
     margin: 10px;
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
+    /* top-align the button column */
+}
+
+/* Text takes the flexible space */
+.grocery-text {
+    flex: 1;
+    padding-right: 8px;
+}
+
+/* Buttons are always stacked vertically */
+.grocery-actions {
+    display: flex;
+    flex-direction: column;
+    /* 👈 this forces vertical */
+    gap: 6px;
 }
 
 .grocery-card.checked {
@@ -176,7 +220,13 @@ input:focus {
     text-decoration: line-through;
 }
 
+/* Make the buttons square-ish and centered */
 .grocery-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    min-height: 40px;
     background: #ff8a47;
     border: none;
     padding: 8px 10px;

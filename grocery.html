@@ -223,15 +223,16 @@
                     });
 
                     div.innerHTML = `
-            <span>${item.ingredient_name} 
+            <div class="grocery-text">
+                ${item.ingredient_name}
                 ${item.quantity ? " - " + item.quantity : ""}
                 ${item.unit ? " " + item.unit : ""}
-            </span>
-            <div>
-              <button class="grocery-btn" onclick="checkItem(${item.id})">✔</button>
-              <button class="grocery-btn" onclick="deleteItem(${item.id})">X</button>
             </div>
-          `;
+            <div class="grocery-actions">
+                <button class="grocery-btn" onclick="checkItem(${item.id})">✔</button>
+                <button class="grocery-btn" onclick="deleteItem(${item.id})">X</button>
+            </div>
+        `;
 
                     body.appendChild(div);
                 });

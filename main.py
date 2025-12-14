@@ -5,7 +5,7 @@
 
 from datetime import datetime
 
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -46,6 +46,57 @@ def get_conn():
     conn.row_factory = sqlite3.Row
     return conn
 
+def init_db():
+    conn = get_conn()
+    cur = conn.cursor()
+
+    # Per-user favorites join table
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS user_favorites (
+            user_id TEXT NOT NULL,
+            recipe_id INTEGER NOT NULL,
+            PRIMARY KEY (user_id, recipe_id)
+        )
+    """)
+
+    # user_id column on grocery_items
+    cur.execute("PRAGMA table_info(grocery_items)")
+    cols = [row["name"] for row in cur.fetchall()]
+    if "user_id" not in cols:
+        cur.execute("ALTER TABLE grocery_items ADD COLUMN user_id TEXT")
+        conn.commit()
+
+    conn.close()
+
+def auto_category(title: str) -> str:
+    t = (title or "").lower()
+
+    if any(word in t for word in ["salad"]):
+        return "Salad"
+    if any(word in t for word in ["soup", "stew", "chowder", "broth"]):
+        return "Soups & Stews"
+    if any(word in t for word in ["pasta", "spaghetti", "noodle", "lasagna"]):
+        return "Pasta"
+    if "chicken" in t:
+        return "Chicken"
+    if any(word in t for word in ["beef", "steak", "burger"]):
+        return "Beef"
+    if any(word in t for word in ["pork", "ham", "bacon"]):
+        return "Pork"
+    if any(word in t for word in ["fish", "salmon", "shrimp", "prawn", "crab"]):
+        return "Seafood"
+    if any(word in t for word in ["cake", "cookie", "brownie", "pie", "tart", "crumble", "dessert"]):
+        return "Dessert"
+    if any(word in t for word in ["sandwich", "wrap", "taco", "quesadilla"]):
+        return "Handhelds"
+
+    return "Other"
+   
+def normalize_user_id(x_user_id: Optional[str]) -> str:
+    return x_user_id or "anon"
+
+# Call on startup
+init_db()
 
 # -----------------------------------------
 # FASTAPI APP
@@ -174,33 +225,51 @@ class GroceryItemOut(GroceryItemIn):
 # -----------------------------------------
 
 @app.post("/favorite/{recipe_id}")
-def favorite(recipe_id: int):
+def favorite(recipe_id: int, x_user_id: Optional[str] = Header(default=None)):
+    user_id = normalize_user_id(x_user_id)
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("UPDATE recipes SET is_favorite = 1 WHERE id = ?", (recipe_id,))
+
+    cur.execute("SELECT id FROM recipes WHERE id = ?", (recipe_id,))
+    if not cur.fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="Recipe not found")
+
+    cur.execute("""
+        INSERT OR IGNORE INTO user_favorites (user_id, recipe_id)
+        VALUES (?, ?)
+    """, (user_id, recipe_id))
     conn.commit()
     conn.close()
     return {"status": "ok"}
 
 
 @app.post("/unfavorite/{recipe_id}")
-def unfavorite(recipe_id: int):
+def unfavorite(recipe_id: int, x_user_id: Optional[str] = Header(default=None)):
+    user_id = normalize_user_id(x_user_id)
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("UPDATE recipes SET is_favorite = 0 WHERE id = ?", (recipe_id,))
+    cur.execute("""
+        DELETE FROM user_favorites
+        WHERE user_id = ? AND recipe_id = ?
+    """, (user_id, recipe_id))
     conn.commit()
     conn.close()
     return {"status": "ok"}
 
 
 @app.get("/favorites")
-def get_favorites():
+def get_favorites(x_user_id: Optional[str] = Header(default=None)):
+    user_id = normalize_user_id(x_user_id)
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute(
-        "SELECT id, title, meal_type, category, source_type, is_favorite "
-        "FROM recipes WHERE is_favorite = 1"
-    )
+    cur.execute("""
+        SELECT r.id, r.title, r.meal_type, r.category, r.source_type
+        FROM recipes r
+        JOIN user_favorites uf ON uf.recipe_id = r.id
+        WHERE uf.user_id = ?
+        ORDER BY r.title COLLATE NOCASE
+    """, (user_id,))
     rows = cur.fetchall()
     conn.close()
 
@@ -211,10 +280,11 @@ def get_favorites():
             "meal_type": r["meal_type"],
             "category": r["category"],
             "source_type": r["source_type"],
-            "is_favorite": bool(r["is_favorite"])
+            "is_favorite": True
         }
         for r in rows
     ]
+
 
 
 # -----------------------------------------
@@ -222,11 +292,16 @@ def get_favorites():
 # -----------------------------------------
 
 @app.get("/recipes")
-def list_recipes():
+def list_recipes(x_user_id: Optional[str] = Header(default=None)):
+    user_id = normalize_user_id(x_user_id)
     conn = get_conn()
     cur = conn.cursor()
     cur.execute("SELECT * FROM recipes ORDER BY id ASC")
     rows = cur.fetchall()
+
+    cur.execute("SELECT recipe_id FROM user_favorites WHERE user_id = ?", (user_id,))
+    fav_ids = {row["recipe_id"] for row in cur.fetchall()}
+
     conn.close()
 
     recipes = []
@@ -242,7 +317,7 @@ def list_recipes():
                 base_recipe_id=r["base_recipe_id"],
                 prep_instructions=r["prep_instructions"],
                 cook_instructions=r["cook_instructions"],
-                is_favorite=bool(r["is_favorite"]),
+                is_favorite=(r["id"] in fav_ids),
                 linked_budget=None,
                 linked_chef=None,
                 ingredients=[],
@@ -253,7 +328,8 @@ def list_recipes():
 
 
 @app.get("/recipe/{recipe_id}")
-def get_recipe(recipe_id: int):
+def get_recipe(recipe_id: int, x_user_id: Optional[str] = Header(default=None)):
+    user_id = normalize_user_id(x_user_id)
     conn = get_conn()
     cur = conn.cursor()
 
@@ -263,19 +339,22 @@ def get_recipe(recipe_id: int):
         conn.close()
         raise HTTPException(status_code=404, detail="Recipe not found")
 
-    cur.execute(
-        """
+    cur.execute("""
         SELECT ingredients.name, recipe_ingredients.quantity, recipe_ingredients.unit
         FROM recipe_ingredients
         JOIN ingredients ON ingredients.id = recipe_ingredients.ingredient_id
         WHERE recipe_id = ?
-        """,
-        (recipe_id,)
-    )
+    """, (recipe_id,))
     ingredients = [
         {"name": row["name"], "quantity": row["quantity"], "unit": row["unit"]}
         for row in cur.fetchall()
     ]
+
+    cur.execute("""
+        SELECT 1 FROM user_favorites
+        WHERE user_id = ? AND recipe_id = ?
+    """, (user_id, recipe_id))
+    is_favorite = cur.fetchone() is not None
 
     conn.close()
 
@@ -289,7 +368,7 @@ def get_recipe(recipe_id: int):
         base_recipe_id=recipe["base_recipe_id"],
         prep_instructions=recipe["prep_instructions"],
         cook_instructions=recipe["cook_instructions"],
-        is_favorite=bool(recipe["is_favorite"]),
+        is_favorite=is_favorite,
         linked_budget=None,
         linked_chef=None,
         ingredients=ingredients,
@@ -319,16 +398,16 @@ def delete_recipe(recipe_id: int):
 # -----------------------------------------
 
 @app.get("/grocery/list", response_model=List[GroceryItemOut])
-def grocery_list():
+def grocery_list(x_user_id: Optional[str] = Header(default=None)):
+    user_id = normalize_user_id(x_user_id)
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute(
-        """
+    cur.execute("""
         SELECT id, ingredient_name, quantity, unit, checked
         FROM grocery_items
+        WHERE user_id = ?
         ORDER BY id DESC
-        """
-    )
+    """, (user_id,))
     items = cur.fetchall()
     conn.close()
 
@@ -345,11 +424,13 @@ def grocery_list():
 
 
 @app.post("/grocery/add_from_recipe/{recipe_id}")
-def add_grocery_from_recipe(recipe_id: int):
+def add_grocery_from_recipe(recipe_id: int, x_user_id: Optional[str] = Header(default=None)):
     """
-    Take all ingredients from a recipe and add them as grocery_items.
-    Uses ingredients.name + recipe_ingredients.quantity/unit.
+    Take all ingredients from a recipe and add them as grocery_items
+    for the current user.
     """
+    user_id = normalize_user_id(x_user_id)
+
     conn = get_conn()
     cur = conn.cursor()
 
@@ -379,10 +460,10 @@ def add_grocery_from_recipe(recipe_id: int):
     for row in rows:
         cur.execute(
             """
-            INSERT INTO grocery_items (ingredient_name, quantity, unit)
-            VALUES (?, ?, ?)
+            INSERT INTO grocery_items (ingredient_name, quantity, unit, user_id)
+            VALUES (?, ?, ?, ?)
             """,
-            (row["ingredient_name"], row["quantity"], row["unit"])
+            (row["ingredient_name"], row["quantity"], row["unit"], user_id)
         )
         added += 1
 
@@ -393,38 +474,45 @@ def add_grocery_from_recipe(recipe_id: int):
 
 
 @app.post("/grocery", response_model=GroceryItemOut)
-def add_grocery(item: GroceryItemIn):
+def add_grocery(item: GroceryItemIn, x_user_id: Optional[str] = Header(default=None)):
+    user_id = normalize_user_id(x_user_id)
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute(
-        """
-        INSERT INTO grocery_items (ingredient_name, quantity, unit)
-        VALUES (?, ?, ?)
-        """,
-        (item.ingredient_name, item.quantity, item.unit)
-    )
+    cur.execute("""
+        INSERT INTO grocery_items (ingredient_name, quantity, unit, user_id)
+        VALUES (?, ?, ?, ?)
+    """, (item.ingredient_name, item.quantity, item.unit, user_id))
     item_id = cur.lastrowid
     conn.commit()
     conn.close()
 
-    return GroceryItemOut(id=item_id, **item.dict())
+    return GroceryItemOut(id=item_id, **item.dict(), checked=False)
 
 
 @app.post("/grocery/check/{item_id}")
-def check_item(item_id: int):
+def check_item(item_id: int, x_user_id: Optional[str] = Header(default=None)):
+    user_id = normalize_user_id(x_user_id)
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("UPDATE grocery_items SET checked = 1 WHERE id = ?", (item_id,))
+    cur.execute("""
+        UPDATE grocery_items
+        SET checked = 1
+        WHERE id = ? AND user_id = ?
+    """, (item_id, user_id))
     conn.commit()
     conn.close()
     return {"status": "ok"}
 
 
 @app.delete("/grocery/delete/{item_id}")
-def delete_item(item_id: int):
+def delete_item(item_id: int, x_user_id: Optional[str] = Header(default=None)):
+    user_id = normalize_user_id(x_user_id)
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("DELETE FROM grocery_items WHERE id = ?", (item_id,))
+    cur.execute("""
+        DELETE FROM grocery_items
+        WHERE id = ? AND user_id = ?
+    """, (item_id, user_id))
     conn.commit()
     conn.close()
     return {"status": "deleted"}

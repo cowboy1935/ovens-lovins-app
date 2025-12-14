@@ -28,11 +28,14 @@
             <button id="view-source-btn" class="btn" style="display:none;">
                 View Full Recipe
             </button>
+            <button id="share-recipe-btn" class="btn btn-secondary">
+                Share Recipe
+            </button>
             <button id="delete-recipe-btn" class="btn" style="background:#c44141;">
                 Delete Recipe
             </button>
-
         </div>
+
 
         <section style="margin-top: 20px;">
             <h2>Ingredients</h2>
@@ -49,13 +52,14 @@
             <div id="cook-section"></div>
         </section>
 
-        <section style="margin-top: 20px;">
+        <section class="notes-section">
             <h2>Your Notes</h2>
-            <p style="color:#888; font-size:0.9rem;">
-                These notes are private on your device. Use them to jot timing tweaks,
-                substitutions, or reminders. The full official instructions stay on the original site.
+            <p class="notes-helper">
+                These notes stay on this device only. Use them for timing tweaks,
+                substitutions, or how <em>you</em> like to do it.
             </p>
-            <textarea id="notes-box" rows="5" style="width:100%;"></textarea>
+            <textarea id="notes-box" class="notes-textarea" rows="5"></textarea>
+            <div id="notes-status" class="notes-status"></div>
         </section>
 
         <section style="margin-top: 20px;">
@@ -112,19 +116,72 @@
             }
         }
 
+        async function shareRecipe() {
+            if (!currentRecipe) return;
+
+            const url = window.location.href;
+            const title = currentRecipe.title || "Recipe";
+
+            if (navigator.share) {
+                // Native share sheet (mobile, some desktop browsers)
+                try {
+                    await navigator.share({
+                        title,
+                        text: `Check out this recipe: ${title}`,
+                        url
+                    });
+                } catch (err) {
+                    // user canceled or share failed – we can ignore quietly
+                    console.log("Share canceled or failed:", err);
+                }
+            } else if (navigator.clipboard && navigator.clipboard.writeText) {
+                try {
+                    await navigator.clipboard.writeText(url);
+                    alert("Recipe link copied to clipboard.");
+                } catch (err) {
+                    console.error("Clipboard failed:", err);
+                    prompt("Copy this recipe link:", url);
+                }
+            } else {
+                // Very old browsers
+                prompt("Copy this recipe link:", url);
+            }
+        }
+
         // -------- Notes (localStorage) --------
+        let notesSaveTimeout = null;
+
         function loadNotes(recipeId) {
             const key = `recipe_notes_${recipeId}`;
             const saved = localStorage.getItem(key);
+            const box = document.getElementById("notes-box");
+            const status = document.getElementById("notes-status");
+
             if (saved) {
-                document.getElementById("notes-box").value = saved;
+                box.value = saved;
+                status.textContent = "Last saved on this device.";
+            } else {
+                status.textContent = "Start typing to save notes automatically.";
             }
         }
 
         function saveNotes(recipeId) {
             const key = `recipe_notes_${recipeId}`;
-            const value = document.getElementById("notes-box").value;
+            const box = document.getElementById("notes-box");
+            const status = document.getElementById("notes-status");
+            const value = box.value;
+
             localStorage.setItem(key, value);
+            status.textContent = "Saved ✔";
+
+            if (notesSaveTimeout) clearTimeout(notesSaveTimeout);
+            notesSaveTimeout = setTimeout(() => {
+                if (!value.trim()) {
+                    status.textContent = "Start typing to save notes automatically.";
+                } else {
+                    status.textContent = "Last saved on this device.";
+                }
+            }, 1500);
         }
 
         // -------- Instructions (Hybrid) --------
@@ -313,6 +370,10 @@
                     } catch (err) {
                         console.error("Delete failed:", err);
                         alert("Could not delete recipe.");
+                    }
+                    const shareBtn = document.getElementById("share-recipe-btn");
+                    if (shareBtn) {
+                        shareBtn.onclick = shareRecipe;
                     }
                 };
 

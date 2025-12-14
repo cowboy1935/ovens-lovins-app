@@ -123,7 +123,7 @@ input:focus {
     border-radius: 12px;
     border: 1px solid #242424;
     cursor: pointer;
-    transition: background 0.2s, border 0.2s;
+    transition: background 0.15s ease, border 0.15s ease, transform 0.08s ease;
 }
 
 .recipe-card:hover {
@@ -135,6 +135,10 @@ input:focus {
     margin-bottom: 8px;
     font-size: 1.2rem;
     color: #ffd873;
+}
+
+.recipe-card:active {
+    transform: scale(0.98);
 }
 
 /* --------------------------
@@ -186,6 +190,32 @@ input:focus {
     transform: translateY(-2px);
 }
 
+.btn {
+    transition: background 0.15s ease, transform 0.08s ease;
+}
+
+.btn:active {
+    transform: scale(0.97);
+}
+
+.btn-secondary {
+    background: #333;
+    color: #f2f2f2;
+}
+
+.btn-secondary:hover {
+    background: #444;
+}
+
+.category-card {
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.category-card.active {
+    transform: translateY(-2px);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
+}
+
 /* --------------------------
    GROCERY LIST
 --------------------------- */
@@ -196,11 +226,8 @@ input:focus {
     border-radius: 10px;
     margin: 10px;
     display: flex;
-    /* key */
     justify-content: space-between;
-    /* text left, buttons right */
     align-items: flex-start;
-    /* buttons pinned to top */
 }
 
 .grocery-card.checked {
@@ -208,23 +235,19 @@ input:focus {
     text-decoration: line-through;
 }
 
-/* Text takes the flexible space */
 .grocery-text {
     flex: 1;
     padding-right: 8px;
     word-break: break-word;
-    /* long text wraps clean */
 }
 
-/* Buttons are always stacked vertically */
 .grocery-actions {
     display: flex;
     flex-direction: column;
-    /* 👈 this forces vertical */
+    /* 👈 vertical stack */
     gap: 6px;
 }
 
-/* Make the buttons square-ish and centered */
 .grocery-btn {
     display: flex;
     align-items: center;
@@ -250,6 +273,14 @@ input:focus {
     background: #58c45c !important;
 }
 
+body.shopping-mode-on .grocery-card {
+    border-color: #58c45c;
+}
+
+body.shopping-mode-on .grocery-actions .grocery-btn:first-child {
+    box-shadow: 0 0 0 2px #58c45c;
+}
+
 /* --------------------------
    INPUT FIELDS
 --------------------------- */
@@ -267,6 +298,40 @@ input[type="number"] {
 input:focus {
     border-color: #f5c236;
     outline: none;
+}
+
+.notes-section {
+    margin-top: 20px;
+}
+
+.notes-helper {
+    color: #999;
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+}
+
+.notes-textarea {
+    width: 100%;
+    min-height: 120px;
+    background: #151515;
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 10px;
+    color: #eee;
+    resize: vertical;
+    font-size: 0.95rem;
+}
+
+.notes-textarea:focus {
+    border-color: #f5c236;
+    outline: none;
+}
+
+.notes-status {
+    font-size: 0.8rem;
+    color: #777;
+    margin-top: 4px;
+    min-height: 1em;
 }
 
 /* --------------------------

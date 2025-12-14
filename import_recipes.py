@@ -65,7 +65,8 @@ def import_recipes():
                 num += 1
 
         meal_type = None
-        category = r.get("category")
+        raw_category = r.get("category")
+        category = raw_category or auto_category(title)
         prep_instructions = "\n".join(r.get("instructions", []))
         cook_instructions = ""
 

@@ -1,6 +1,6 @@
 // service-worker.js
 
-const CACHE_NAME = "ovens-lovins-v1";
+const CACHE_NAME = "ovens-lovins-v3";  // or any higher number
 const urlsToCache = [
     "/",
     "/index.html",

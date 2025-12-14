@@ -1,6 +1,7 @@
 import json
 import sqlite3
 from pathlib import Path
+from main import auto_category
 
 DB_PATH = Path(__file__).parent / "recipes.db"
 JSON_PATH = Path(__file__).parent / "recipes.json"

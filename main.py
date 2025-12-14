@@ -219,6 +219,81 @@ class GroceryItemOut(GroceryItemIn):
     id: int
     checked: bool = False
 
+@app.post("/recipes")
+def create_recipe(recipe: RecipeIn):
+    """
+    Create a new recipe (used by the Add Recipe page).
+    """
+    conn = get_conn()
+    cur = conn.cursor()
+
+    # 1) Category: use given or auto-detect from title
+    category = recipe.category or auto_category(recipe.title)
+
+    # 2) Simple slug from title, kept unique
+    base_slug = recipe.title.strip().lower().replace(" ", "-")
+    slug = base_slug or None
+
+    if slug:
+        suffix = 2
+        while True:
+            cur.execute("SELECT id FROM recipes WHERE slug = ?", (slug,))
+            if not cur.fetchone():
+                break
+            slug = f"{base_slug}-{suffix}"
+            suffix += 1
+
+    # 3) Insert into recipes
+    cur.execute(
+        """
+        INSERT INTO recipes
+        (title, slug, meal_type, category, source_type, is_budget_friendly,
+         base_recipe_id, prep_instructions, cook_instructions, source_url)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            recipe.title,
+            slug,
+            recipe.meal_type,
+            category,
+            recipe.source_type,                        # "custom" from upload.html
+            1 if recipe.is_budget_friendly else 0,
+            recipe.base_recipe_id,
+            recipe.prep_instructions,
+            recipe.cook_instructions,
+            None,                                      # no external URL for user recipes
+        ),
+    )
+    recipe_id = cur.lastrowid
+
+    # 4) Ingredients: ensure names exist, then link in recipe_ingredients
+    for ing in recipe.ingredients:
+        # skip completely empty rows
+        if not ing.name.strip():
+            continue
+
+        cur.execute("INSERT OR IGNORE INTO ingredients (name) VALUES (?)", (ing.name,))
+        cur.execute("SELECT id FROM ingredients WHERE name = ?", (ing.name,))
+        row = cur.fetchone()
+        if not row:
+            continue
+
+        ingredient_id = row["id"]
+
+        cur.execute(
+            """
+            INSERT INTO recipe_ingredients
+            (recipe_id, ingredient_id, quantity, unit)
+            VALUES (?, ?, ?, ?)
+            """,
+            (recipe_id, ingredient_id, ing.quantity, ing.unit),
+        )
+
+    conn.commit()
+    conn.close()
+
+    # 5) Frontend only really needs the new ID
+    return {"id": recipe_id}
 
 # -----------------------------------------
 # FAVORITES
@@ -286,10 +361,78 @@ def get_favorites(x_user_id: Optional[str] = Header(default=None)):
     ]
 
 
-
 # -----------------------------------------
 # RECIPE ENDPOINTS
 # -----------------------------------------
+
+@app.post("/recipes")
+def create_recipe(recipe: RecipeIn):
+    """
+    Create a new recipe (user-added) and attach its ingredients.
+    Uses auto_category() if no category is provided.
+    """
+    conn = get_conn()
+    cur = conn.cursor()
+
+    # Decide category automatically if missing
+    category = recipe.category or auto_category(recipe.title)
+
+    # Let source_type come from the payload, but default "custom" for user recipes
+    source_type = recipe.source_type or "custom"
+
+    cur.execute("""
+        INSERT INTO recipes
+            (title, meal_type, category, source_type,
+             is_budget_friendly, base_recipe_id,
+             prep_instructions, cook_instructions)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        recipe.title,
+        recipe.meal_type,
+        category,
+        source_type,
+        int(recipe.is_budget_friendly),
+        recipe.base_recipe_id,
+        recipe.prep_instructions,
+        recipe.cook_instructions,
+    ))
+    recipe_id = cur.lastrowid
+
+    # Attach ingredients
+    for ing in recipe.ingredients:
+        # make sure we have a name
+        if not ing.name:
+            continue
+
+        # ensure ingredient exists
+        cur.execute(
+            "INSERT OR IGNORE INTO ingredients (name) VALUES (?)",
+            (ing.name,)
+        )
+        cur.execute(
+            "SELECT id FROM ingredients WHERE name = ?",
+            (ing.name,)
+        )
+        row = cur.fetchone()
+        if not row:
+            continue
+
+        ing_id = row["id"]
+        cur.execute(
+            """
+            INSERT INTO recipe_ingredients
+                (recipe_id, ingredient_id, quantity, unit)
+            VALUES (?, ?, ?, ?)
+            """,
+            (recipe_id, ing_id, ing.quantity, ing.unit)
+        )
+
+    conn.commit()
+    conn.close()
+
+    # For now, just return the new id – front end can redirect to /recipe.html?id={id}
+    return {"id": recipe_id}
+
 
 @app.get("/recipes")
 def list_recipes(x_user_id: Optional[str] = Header(default=None)):
@@ -333,12 +476,14 @@ def get_recipe(recipe_id: int, x_user_id: Optional[str] = Header(default=None)):
     conn = get_conn()
     cur = conn.cursor()
 
+    # Main recipe row
     cur.execute("""SELECT * FROM recipes WHERE id = ?""", (recipe_id,))
     recipe = cur.fetchone()
     if not recipe:
         conn.close()
         raise HTTPException(status_code=404, detail="Recipe not found")
 
+    # Ingredients
     cur.execute("""
         SELECT ingredients.name, recipe_ingredients.quantity, recipe_ingredients.unit
         FROM recipe_ingredients
@@ -350,6 +495,7 @@ def get_recipe(recipe_id: int, x_user_id: Optional[str] = Header(default=None)):
         for row in cur.fetchall()
     ]
 
+    # Per-user favorite
     cur.execute("""
         SELECT 1 FROM user_favorites
         WHERE user_id = ? AND recipe_id = ?

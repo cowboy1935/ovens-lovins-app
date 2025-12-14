@@ -46,7 +46,7 @@
         getRecipe(id) {
             return apiFetch(`/recipe/${id}`);
         },
-        createRecipe(recipe) {                     // 👈 NEW
+        createRecipe(recipe) {
             return apiFetch("/recipes", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },

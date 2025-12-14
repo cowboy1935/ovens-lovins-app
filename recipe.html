@@ -28,6 +28,10 @@
             <button id="view-source-btn" class="btn" style="display:none;">
                 View Full Recipe
             </button>
+            <button id="delete-recipe-btn" class="btn" style="background:#c44141;">
+                Delete Recipe
+            </button>
+
         </div>
 
         <section style="margin-top: 20px;">
@@ -295,6 +299,22 @@
                 currentRecipe = recipe;
 
                 document.getElementById("recipe-title").textContent = recipe.title;
+                document.getElementById("delete-recipe-btn").onclick = async () => {
+                    if (!currentRecipe) return;
+
+                    // You can add protection here later (only allow delete if source_type !== 'chef')
+                    const confirmed = confirm("Delete this recipe for everyone?");
+                    if (!confirmed) return;
+
+                    try {
+                        await window.api.deleteRecipe(currentRecipe.id);
+                        alert("Recipe deleted.");
+                        window.location.href = "index.html";
+                    } catch (err) {
+                        console.error("Delete failed:", err);
+                        alert("Could not delete recipe.");
+                    }
+                };
 
                 // Remember last viewed
                 localStorage.setItem("last_recipe_id", recipe.id);

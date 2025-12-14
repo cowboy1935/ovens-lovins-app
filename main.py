@@ -294,7 +294,23 @@ def get_recipe(recipe_id: int):
         linked_chef=None,
         ingredients=ingredients,
         source_url=recipe["source_url"] if "source_url" in recipe.keys() else None,
-)
+    )
+
+@app.delete("/recipe/{recipe_id}")
+def delete_recipe(recipe_id: int):
+    conn = get_conn()
+    cur = conn.cursor()
+
+    # Delete linked images
+    cur.execute("DELETE FROM recipe_images WHERE recipe_id = ?", (recipe_id,))
+    # Delete ingredient links
+    cur.execute("DELETE FROM recipe_ingredients WHERE recipe_id = ?", (recipe_id,))
+    # Delete the recipe itself
+    cur.execute("DELETE FROM recipes WHERE id = ?", (recipe_id,))
+
+    conn.commit()
+    conn.close()
+    return {"status": "deleted"}
 
 
 

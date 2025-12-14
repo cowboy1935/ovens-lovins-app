@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Ovens Lovin’s – The Kitchen Helper</title>
+    <title>Chef Recipes</title>
 
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json" />
@@ -43,6 +43,14 @@
         <input id="searchBox" type="text" placeholder="Search…" oninput="renderRecipes()" />
     </div>
 
+    <!-- -------------------- QUICK FILTER CHIPS -------------------- -->
+    <div class="quick-filters">
+        <button class="filter-chip active" data-filter="all">All</button>
+        <button class="filter-chip" data-filter="favorites">Favorites</button>
+        <button class="filter-chip" data-filter="chef">Chef Ramsay</button>
+        <button class="filter-chip" data-filter="budget">Budget</button>
+    </div>
+
     <!-- -------------------- RECIPE RESULTS -------------------- -->
     <div id="recipe-list"></div>
 
@@ -51,8 +59,9 @@
 
     <script>
         let allRecipes = [];
+        let currentQuickFilter = "all";
 
-        // -------------------- CONTINUE RECIPE BUTTON --------------------
+        // -------- CONTINUE BUTTON --------
         function enableContinueButton() {
             const last = localStorage.getItem("last_recipe_id");
             if (last) {
@@ -62,9 +71,57 @@
             }
         }
 
-        // -------------------- LOAD ALL RECIPES --------------------
+        // -------- QUICK FILTER CHIPS --------
+        function setQuickFilter(filter) {
+            currentQuickFilter = filter;
+            document.querySelectorAll(".filter-chip").forEach(btn => {
+                btn.classList.toggle("active", btn.dataset.filter === filter);
+            });
+            renderRecipes();
+        }
+
+        function setupQuickFilters() {
+            document.querySelectorAll(".filter-chip").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    setQuickFilter(btn.dataset.filter);
+                });
+            });
+
+            // If we came from the nav "Favorites" button
+            if (window.location.hash === "#favorites") {
+                setQuickFilter("favorites");
+            }
+        }
+
+        // -------- FAVORITE TOGGLE --------
+        async function toggleFavorite(recipe, heartEl) {
+            try {
+                if (recipe.is_favorite) {
+                    await window.api.unfavoriteRecipe(recipe.id);
+                    recipe.is_favorite = false;
+                } else {
+                    await window.api.favoriteRecipe(recipe.id);
+                    recipe.is_favorite = true;
+                }
+            } catch (err) {
+                console.error("Favorite toggle failed:", err);
+                // if request failed, don't lie with UI
+                return;
+            }
+
+            heartEl.classList.toggle("off", !recipe.is_favorite);
+            heartEl.textContent = recipe.is_favorite ? "❤️" : "🤍";
+
+            // If we're viewing only favorites, update list
+            if (currentQuickFilter === "favorites") {
+                renderRecipes();
+            }
+        }
+
+        // -------- LOAD ALL RECIPES --------
         async function init() {
             enableContinueButton();
+            setupQuickFilters();
 
             try {
                 allRecipes = await window.api.getRecipes();
@@ -76,18 +133,31 @@
             }
         }
 
-        // -------------------- RENDER LIST --------------------
+        // -------- RENDER LIST --------
         function renderRecipes() {
             const mealType = document.getElementById("mealTypeFilter").value;
             const search = document.getElementById("searchBox").value.toLowerCase();
             const container = document.getElementById("recipe-list");
 
-            let filtered = allRecipes;
+            let filtered = allRecipes.slice();
 
-            if (mealType) filtered = filtered.filter(r => r.meal_type === mealType);
-            if (search.trim()) filtered = filtered.filter(r =>
-                r.title.toLowerCase().includes(search)
-            );
+            if (mealType) {
+                filtered = filtered.filter(r => r.meal_type === mealType);
+            }
+
+            if (search.trim()) {
+                filtered = filtered.filter(r =>
+                    r.title.toLowerCase().includes(search)
+                );
+            }
+
+            if (currentQuickFilter === "favorites") {
+                filtered = filtered.filter(r => r.is_favorite);
+            } else if (currentQuickFilter === "chef") {
+                filtered = filtered.filter(r => r.source_type === "chef");
+            } else if (currentQuickFilter === "budget") {
+                filtered = filtered.filter(r => r.is_budget_friendly);
+            }
 
             container.innerHTML = "";
 
@@ -97,23 +167,32 @@
             }
 
             filtered.forEach(recipe => {
-                const div = document.createElement("div");
-                div.className = "recipe-card";
-                div.onclick = () => viewRecipe(recipe.id);
+                const card = document.createElement("div");
+                card.className = "recipe-card";
 
-                div.innerHTML = `
+                card.innerHTML = `
                     <h3>${recipe.title}</h3>
                     <div class="tags">
                         ${recipe.meal_type ? `<span class="tag">${recipe.meal_type}</span>` : ""}
                         ${recipe.category ? `<span class="tag">${recipe.category}</span>` : ""}
                         <span class="tag">${recipe.source_type}</span>
-                        ${recipe.is_favorite ?
-                        `<span class="fav-heart">❤️</span>` :
-                        `<span class="fav-heart off">🤍</span>`}
+                        <span class="fav-heart ${recipe.is_favorite ? "" : "off"}" data-id="${recipe.id}">
+                            ${recipe.is_favorite ? "❤️" : "🤍"}
+                        </span>
                     </div>
                 `;
 
-                container.appendChild(div);
+                // click card = open recipe
+                card.addEventListener("click", () => viewRecipe(recipe.id));
+
+                // click heart = toggle favorite ONLY
+                const heartEl = card.querySelector(".fav-heart");
+                heartEl.addEventListener("click", (evt) => {
+                    evt.stopPropagation(); // don't navigate
+                    toggleFavorite(recipe, heartEl);
+                });
+
+                container.appendChild(card);
             });
         }
 
@@ -121,10 +200,9 @@
             window.location.href = `recipe.html?id=${id}`;
         }
 
-        // Start application
         init();
 
-        // -------------------- SERVICE WORKER --------------------
+        // -------- SERVICE WORKER --------
         if ("serviceWorker" in navigator) {
             window.addEventListener("load", () => {
                 navigator.serviceWorker

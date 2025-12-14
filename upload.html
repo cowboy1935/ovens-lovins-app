@@ -214,13 +214,13 @@
         addIngredientRow();
     </script>
 
-    <!-- Service worker -->
     <script>
+        // -------- SERVICE WORKER --------
         if ("serviceWorker" in navigator) {
             window.addEventListener("load", () => {
                 navigator.serviceWorker
                     .register("/service-worker.js")
-                    .catch(err => console.error("SW registration failed:", err));
+                    .catch(err => console.error("SW failed:", err));
             });
         }
     </script>

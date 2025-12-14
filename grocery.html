@@ -256,42 +256,49 @@
             const qty = document.getElementById("grocery-qty").value.trim();
             const unit = document.getElementById("grocery-unit").value.trim();
 
-            if (!name) return alert("Enter an item.");
+            if (!name) {
+                alert("Enter an item.");
+                return;
+            }
 
-            await fetch("/grocery", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    ingredient_name: name,
-                    quantity: qty || null,
-                    unit: unit || null
-                })
+            // ✅ use API wrapper so X-User-Id is sent
+            await window.api.addGrocery({
+                ingredient_name: name,
+                quantity: qty || null,
+                unit: unit || null
             });
 
-            // Reset input boxes
+            // clear inputs
             document.getElementById("grocery-name").value = "";
             document.getElementById("grocery-qty").value = "";
             document.getElementById("grocery-unit").value = "";
 
+            // reload list for this user
             loadList();
         }
+
 
 
         async function deleteItem(id) {
-            await fetch(`/grocery/delete/${id}`, { method: "DELETE" });
+            await window.api.deleteGrocery(id);  // ✅ API wrapper
             loadList();
         }
+
 
         async function checkItem(id) {
-            await fetch(`/grocery/check/${id}`, { method: "POST" });
+            await window.api.checkGrocery(id);   // ✅ API wrapper
             loadList();
         }
 
+
         async function clearCompleted() {
-            const data = await window.api.getGroceryList();
-            for (const item of data.filter(i => i.checked)) {
-                await fetch(`/grocery/delete/${item.id}`, { method: "DELETE" });
+            const data = await window.api.getGroceryList();   // ✅ API wrapper
+            const completed = data.filter(i => i.checked);
+
+            for (const item of completed) {
+                await window.api.deleteGrocery(item.id);      // ✅ API wrapper
             }
+
             loadList();
         }
 

@@ -137,8 +137,6 @@
             const search = document.getElementById("searchBox").value.toLowerCase();
             const container = document.getElementById("recipe-list");
 
-            let filtered = allRecipes.slice();
-
             if (mealType) {
                 filtered = filtered.filter(r => r.meal_type === mealType);
             }
@@ -157,6 +155,8 @@
                 filtered = filtered.filter(r => r.is_budget_friendly);
             }
 
+            let filtered = window.allRecipes ? window.allRecipes.slice() : [];
+
             container.innerHTML = "";
 
             if (!filtered.length) {
@@ -165,7 +165,7 @@
             }
         }
 
-        filter.forEach(recipe => {
+        filtered.forEach(recipe => {
             const card = document.createElement("div");
             card.className = "recipe-card";
 

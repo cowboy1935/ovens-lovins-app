@@ -46,6 +46,13 @@
         getRecipe(id) {
             return apiFetch(`/recipe/${id}`);
         },
+        createRecipe(recipe) {                     // 👈 NEW
+            return apiFetch("/recipes", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(recipe)
+            });
+        },
         favoriteRecipe(id) {
             return apiFetch(`/favorite/${id}`, { method: "POST" });
         },

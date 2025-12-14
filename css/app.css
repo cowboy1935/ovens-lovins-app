@@ -216,6 +216,37 @@ input:focus {
     box-shadow: 0 3px 10px rgba(0, 0, 0, 0.5);
 }
 
+.form-section {
+    background: #141414;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 15px;
+    border: 1px solid #222;
+}
+
+.form-section h2 {
+    margin-bottom: 8px;
+}
+
+.form-section label {
+    display: block;
+    margin-top: 8px;
+    margin-bottom: 4px;
+    font-size: 0.95rem;
+    color: #ddd;
+}
+
+.ingredient-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.ingredient-row input {
+    flex: 1;
+}
+
 /* --------------------------
    GROCERY LIST
 --------------------------- */

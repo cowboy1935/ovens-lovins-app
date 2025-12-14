@@ -4,218 +4,211 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="manifest" href="manifest.json" />
+    <title>Add Recipe – Ovens Lovin’s</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#111111" />
-    <link rel="apple-touch-icon" href="icons/icon-192.png" />
-    <link rel="stylesheet" href="css/app.css">
-    <title>Add New Recipe</title>
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
 
-    <style>
-        body {
-            background: #111;
-            color: #eee;
-            font-family: system-ui, sans-serif;
-            margin: 0;
-            padding: 20px;
-        }
-
-        h1 {
-            margin-top: 0;
-            color: #f4c430;
-        }
-
-        label {
-            display: block;
-            margin-top: 10px;
-            margin-bottom: 5px;
-            font-weight: bold;
-        }
-
-        input,
-        select,
-        textarea {
-            width: 100%;
-            padding: 8px;
-            background: #1c1c1c;
-            border: 1px solid #333;
-            color: #eee;
-            border-radius: 6px;
-            margin-bottom: 10px;
-        }
-
-        .ingredient-row {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 10px;
-        }
-
-        .ingredient-row input {
-            flex: 1;
-        }
-
-        button {
-            padding: 12px;
-            background: #f4c430;
-            color: #111;
-            border: none;
-            border-radius: 8px;
-            font-weight: bold;
-            width: 100%;
-            margin-top: 15px;
-            cursor: pointer;
-        }
-
-        .small-btn {
-            padding: 6px 10px;
-            font-size: 0.8rem;
-            background: #ff7f50;
-            width: auto;
-        }
-    </style>
+    <!-- Styles -->
+    <link rel="stylesheet" href="/css/app.css" />
 </head>
 
 <body>
 
-    <div class="nav-bar">
-        <button onclick="window.location.href='index.html'">Home</button>
-        <button onclick="window.location.href='upload.html'">Add Recipe</button>
-        <button onclick="window.location.href='index.html#favorites'">Favorites</button>
+    <!-- NAVIGATION BAR -->
+    <div class="nav-container">
+        <button class="nav-btn" onclick="window.location.href='index.html'">Home</button>
+        <button class="nav-btn" onclick="window.location.href='upload.html'">Add Recipe</button>
+        <button class="nav-btn" onclick="window.location.href='index.html#favorites'">Favorites</button>
+        <button class="nav-btn" onclick="window.location.href='grocery.html'">Grocery List</button>
     </div>
 
-    <style>
-        .nav-bar {
-            display: flex;
-            gap: 10px;
-            padding: 10px;
-            background: #000;
-            border-bottom: 1px solid #333;
-            margin-bottom: 20px;
-        }
+    <h1 class="page-title">Add a New Recipe</h1>
 
-        .nav-bar button {
-            padding: 10px;
-            background: #f4c430;
-            font-weight: bold;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-    </style>
+    <main style="padding: 15px;">
 
-    <h1>Add a New Recipe</h1>
+        <!-- BASIC INFO -->
+        <div class="form-section">
+            <h2>Recipe Details</h2>
 
-    <label>Title</label>
-    <input id="title" type="text" placeholder="Recipe title">
+            <label for="title">Title *</label>
+            <input id="title" type="text" placeholder="Beef Wellington, Sticky Toffee Pudding…" />
 
-    <label>Category</label>
-    <select id="category">
-        <option value="">Choose Category</option>
-        <option>Chicken</option>
-        <option>Beef</option>
-        <option>Pasta</option>
-        <option>Seafood</option>
-        <option>Holiday</option>
-        <option>Party</option>
-        <option>Dessert</option>
-    </select>
+            <label for="meal-type">Meal Type *</label>
+            <select id="meal-type">
+                <option value="">Select meal type…</option>
+                <option value="Breakfast">Breakfast</option>
+                <option value="Lunch">Lunch</option>
+                <option value="Dinner">Dinner</option>
+                <option value="Dessert">Dessert</option>
+                <option value="Snack">Snack</option>
+            </select>
 
-    <label>Meal Type</label>
-    <select id="meal_type">
-        <option value="">Choose Meal Type</option>
-        <option>Breakfast</option>
-        <option>Lunch</option>
-        <option>Dinner</option>
-        <option>Dessert</option>
-        <option>Snack</option>
-    </select>
+            <label for="category">Category (optional)</label>
+            <input id="category" type="text" placeholder="e.g., Chicken, Pasta, Salad…" />
 
-    <label>Recipe Type</label>
-    <select id="source_type">
-        <option value="user">User Recipe</option>
-        <option value="chef">Chef-Style</option>
-        <option value="budget">Budget Version</option>
-    </select>
+            <div style="margin-top: 10px;">
+                <label style="display:flex; align-items:center; gap:8px; font-size:0.95rem;">
+                    <input type="checkbox" id="is-budget" style="width:auto;" />
+                    Budget friendly
+                </label>
+            </div>
+        </div>
 
-    <label>Base Recipe ID (only if this is a budget version)</label>
-    <input id="base_recipe_id" type="number" placeholder="Leave blank unless linking to a chef recipe">
+        <!-- INGREDIENTS -->
+        <div class="form-section">
+            <h2>Ingredients</h2>
+            <p style="color:#999; font-size:0.9rem; margin-bottom:8px;">
+                Add each ingredient on its own row. Only name is required.
+            </p>
 
-    <h2>Ingredients</h2>
+            <div id="ingredients-container"></div>
 
-    <div id="ingredients"></div>
+            <button type="button" class="btn btn-secondary" id="add-ingredient-btn">
+                + Add Ingredient Row
+            </button>
+        </div>
 
-    <button class="small-btn" onclick="addIngredientRow()">+ Add Ingredient</button>
+        <!-- INSTRUCTIONS -->
+        <div class="form-section">
+            <h2>Instructions</h2>
 
-    <label>Preparation Instructions</label>
-    <textarea id="prep_instructions" rows="4"></textarea>
+            <label for="prep">Prep Instructions</label>
+            <textarea id="prep" rows="4" placeholder="Chop, marinate, preheat…" style="width:100%;"></textarea>
 
-    <label>Cooking Instructions</label>
-    <textarea id="cook_instructions" rows="4"></textarea>
+            <label for="cook" style="margin-top:10px;">Cooking Instructions</label>
+            <textarea id="cook" rows="4" placeholder="Cook, simmer, bake…" style="width:100%;"></textarea>
+        </div>
 
-    <button onclick="submitRecipe()">Submit Recipe</button>
+        <!-- ACTIONS -->
+        <div style="margin-top: 15px; margin-bottom:25px;">
+            <button id="save-recipe-btn" class="btn">
+                Save Recipe
+            </button>
+        </div>
 
-    <script src="js/api.js"></script>
+    </main>
+
+    <script src="/js/api.js"></script>
     <script>
-        function addIngredientRow() {
-            const container = document.getElementById("ingredients");
-
+        function createIngredientRow() {
             const row = document.createElement("div");
             row.className = "ingredient-row";
 
             row.innerHTML = `
-                <input type="text" placeholder="Ingredient name" class="ing-name">
-                <input type="text" placeholder="Qty" class="ing-qty" style="max-width:80px;">
-                <input type="text" placeholder="Unit" class="ing-unit" style="max-width:80px;">
-                <button class="small-btn" onclick="this.parentNode.remove()">X</button>
+                <input
+                    type="text"
+                    class="ingredient-name"
+                    placeholder="Ingredient (required)" />
+
+                <input
+                    type="text"
+                    class="ingredient-qty"
+                    placeholder="Qty (e.g. 2, 1½, pinch)" />
+
+                <input
+                    type="text"
+                    class="ingredient-unit"
+                    placeholder="Unit (lb, cup, tsp…)" />
             `;
 
-            container.appendChild(row);
+            return row;
         }
 
-        async function submitRecipe() {
+        function addIngredientRow() {
+            const container = document.getElementById("ingredients-container");
+            container.appendChild(createIngredientRow());
+        }
+
+        async function saveRecipe() {
+            const title = document.getElementById("title").value.trim();
+            const mealType = document.getElementById("meal-type").value;
+            const category = document.getElementById("category").value.trim();
+            const isBudget = document.getElementById("is-budget").checked;
+            const prep = document.getElementById("prep").value.trim();
+            const cook = document.getElementById("cook").value.trim();
+
+            if (!title) {
+                alert("Please enter a recipe title.");
+                return;
+            }
+
+            if (!mealType) {
+                alert("Please choose a meal type.");
+                return;
+            }
+
+            // Collect ingredients
+            const rows = document.querySelectorAll(".ingredient-row");
             const ingredients = [];
 
-            document.querySelectorAll(".ingredient-row").forEach(row => {
-                const name = row.querySelector(".ing-name").value.trim();
-                const quantity = row.querySelector(".ing-qty").value.trim();
-                const unit = row.querySelector(".ing-unit").value.trim();
+            rows.forEach(row => {
+                const name = row.querySelector(".ingredient-name").value.trim();
+                const qty = row.querySelector(".ingredient-qty").value.trim();
+                const unit = row.querySelector(".ingredient-unit").value.trim();
 
-                if (name) {
-                    ingredients.push({ name, quantity, unit });
-                }
+                if (!name) return; // skip empty rows
+
+                ingredients.push({
+                    name,
+                    quantity: qty || null,
+                    unit: unit || null
+                });
             });
 
-            const payload = {
-                title: document.getElementById("title").value.trim(),
-                meal_type: document.getElementById("meal_type").value,
-                category: document.getElementById("category").value,
-                source_type: document.getElementById("source_type").value,
-                base_recipe_id: document.getElementById("base_recipe_id").value || null,
-                prep_instructions: document.getElementById("prep_instructions").value,
-                cook_instructions: document.getElementById("cook_instructions").value,
+            if (!ingredients.length) {
+                alert("Add at least one ingredient.");
+                return;
+            }
+
+            const recipePayload = {
+                title,
+                meal_type: mealType,
+                category: category || null,
+                source_type: "custom",           // user-added recipes
+                is_budget_friendly: isBudget,
+                base_recipe_id: null,
+                prep_instructions: prep || "",
+                cook_instructions: cook || "",
                 ingredients
             };
 
-            const res = await fetch({
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload)
-            });
-
-            if (res.ok) {
-                alert("Recipe added!");
-                window.location.href = "index.html";
-            } else {
-                const err = await res.json();
-                alert("Error: " + (err.detail ?? "Unknown error"));
+            try {
+                const result = await window.api.createRecipe(recipePayload);
+                if (result && result.id) {
+                    // Jump straight to the recipe view
+                    window.location.href = `recipe.html?id=${result.id}`;
+                } else {
+                    alert("Recipe saved, but could not read the new ID.");
+                }
+            } catch (err) {
+                console.error("Failed to save recipe:", err);
+                alert("Could not save recipe. Please try again.");
             }
         }
 
-        // Add first empty ingredient row on page load
-        addIngredientRow();
+        function initUploadPage() {
+            // start with 3 ingredient rows
+            addIngredientRow();
+            addIngredientRow();
+            addIngredientRow();
+
+            document
+                .getElementById("add-ingredient-btn")
+                .addEventListener("click", addIngredientRow);
+
+            document
+                .getElementById("save-recipe-btn")
+                .addEventListener("click", saveRecipe);
+        }
+
+        initUploadPage();
     </script>
 
+    <!-- SERVICE WORKER -->
     <script>
-        // -------- SERVICE WORKER --------
         if ("serviceWorker" in navigator) {
             window.addEventListener("load", () => {
                 navigator.serviceWorker
@@ -224,6 +217,7 @@
             });
         }
     </script>
+
 </body>
 
 </html>

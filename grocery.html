@@ -29,14 +29,15 @@
 
     <!-- INPUT FORM -->
     <div class="form-section">
-        <label>Item name:</label>
-        <input id="grocery-name" type="text" placeholder="Tomatoes, Chicken, Milk…" />
+        <label for="grocery-name">Item name:</label>
+        <input id="grocery-name" ...>
 
-        <label>Quantity:</label>
-        <input id="grocery-qty" type="text" placeholder="e.g., 2, 1½, dozen" />
+        <label for="grocery-qty">Quantity:</label>
+        <input id="grocery-qty" ...>
 
-        <label>Unit:</label>
-        <input id="grocery-unit" type="text" placeholder="lb, pcs, cup…" />
+        <label for="grocery-unit">Unit:</label>
+        <input id="grocery-unit" ...>
+
 
         <button class="btn" onclick="addItem()">Add Item</button>
     </div>
@@ -309,9 +310,14 @@
     <!-- SERVICE WORKER -->
     <script>
         if ("serviceWorker" in navigator) {
-            navigator.serviceWorker.register("service-worker.js");
+            window.addEventListener("load", () => {
+                navigator.serviceWorker
+                    .register("/service-worker.js")
+                    .catch(err => console.error("SW registration failed:", err));
+            });
         }
     </script>
+
 
 </body>
 

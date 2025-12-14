@@ -1,17 +1,25 @@
 // service-worker.js
 
-const CACHE_NAME = "ovens-lovins-v3";  // or any higher number
+const CACHE_NAME = "ovens-lovins-v4";  // 👈 bump this when you change frontend
 const urlsToCache = [
     "/",
     "/index.html",
-    "/upload.html",
     "/recipe.html",
     "/grocery.html",
+    "/upload.html",
     "/css/app.css",
     "/js/api.js",
-    "/manifest.json"
+    "/manifest.json",
+    "/icons/icon-48.png",
+    "/icons/icon-72.png",
+    "/icons/icon-96.png",
+    "/icons/icon-128.png",
+    "/icons/icon-192.png",
+    "/icons/icon-256.png",
+    "/icons/icon-512.png"
 ];
 
+// Install
 self.addEventListener("install", event => {
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
@@ -19,6 +27,7 @@ self.addEventListener("install", event => {
     self.skipWaiting();
 });
 
+// Activate – clear old caches
 self.addEventListener("activate", event => {
     event.waitUntil(
         caches.keys().then(keys =>
@@ -32,8 +41,8 @@ self.addEventListener("activate", event => {
     self.clients.claim();
 });
 
+// Fetch – cache-first for GET only
 self.addEventListener("fetch", event => {
-    // Don't mess with POST/PUT/etc. – let API calls go through normally
     if (event.request.method !== "GET") {
         return;
     }

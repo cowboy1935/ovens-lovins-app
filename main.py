@@ -155,6 +155,7 @@ class RecipeOut(BaseModel):
     linked_budget: Optional[dict] = None
     linked_chef: Optional[dict] = None
     ingredients: List[dict] = Field(default_factory=list)
+    source_url: Optional[str] = None  # 👈 add this
 
 
 class GroceryItemIn(BaseModel):
@@ -244,7 +245,8 @@ def list_recipes():
                 is_favorite=bool(r["is_favorite"]),
                 linked_budget=None,
                 linked_chef=None,
-                ingredients=[]
+                ingredients=[],
+                source_url=r["source_url"] if "source_url" in r.keys() else None,
             )
         )
     return recipes
@@ -290,8 +292,10 @@ def get_recipe(recipe_id: int):
         is_favorite=bool(recipe["is_favorite"]),
         linked_budget=None,
         linked_chef=None,
-        ingredients=ingredients
-    )
+        ingredients=ingredients,
+        source_url=recipe["source_url"] if "source_url" in recipe.keys() else None,
+)
+
 
 
 # -----------------------------------------

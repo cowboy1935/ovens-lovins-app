@@ -65,7 +65,7 @@
             if (last) {
                 const btn = document.getElementById("continue-btn");
                 btn.style.display = "inline-block";
-                btn.onclick = () => window.location.href = `recipe.html?id=${last}`;
+                btn.onclick = () => (window.location.href = `recipe.html?id=${last}`);
             }
         }
 
@@ -103,14 +103,12 @@
                 }
             } catch (err) {
                 console.error("Favorite toggle failed:", err);
-                // if request failed, don't lie with UI
                 return;
             }
 
             heartEl.classList.toggle("off", !recipe.is_favorite);
             heartEl.textContent = recipe.is_favorite ? "❤️" : "🤍";
 
-            // If we're viewing only favorites, update list
             if (currentQuickFilter === "favorites") {
                 renderRecipes();
             }
@@ -137,6 +135,9 @@
             const search = document.getElementById("searchBox").value.toLowerCase();
             const container = document.getElementById("recipe-list");
 
+            // start from all recipes
+            let filtered = Array.isArray(allRecipes) ? allRecipes.slice() : [];
+
             if (mealType) {
                 filtered = filtered.filter(r => r.meal_type === mealType);
             }
@@ -155,21 +156,19 @@
                 filtered = filtered.filter(r => r.is_budget_friendly);
             }
 
-            let filtered = window.allRecipes ? window.allRecipes.slice() : [];
-
             container.innerHTML = "";
 
             if (!filtered.length) {
-                container.innerHTML = "<p style='color:#777; padding:10px;'>No recipes match those filters. Try clearing search or switching meal type.</p>";
+                container.innerHTML =
+                    "<p style='color:#777; padding:10px;'>No recipes match those filters. Try clearing search or switching meal type.</p>";
                 return;
             }
-        }
 
-        filtered.forEach(recipe => {
-            const card = document.createElement("div");
-            card.className = "recipe-card";
+            filtered.forEach(recipe => {
+                const card = document.createElement("div");
+                card.className = "recipe-card";
 
-            card.innerHTML = `
+                card.innerHTML = `
                     <h3>${recipe.title}</h3>
                     <div class="tags">
                         ${recipe.meal_type ? `<span class="tag">${recipe.meal_type}</span>` : ""}
@@ -181,18 +180,19 @@
                     </div>
                 `;
 
-            // click card = open recipe
-            card.addEventListener("click", () => viewRecipe(recipe.id));
+                // click card = open recipe
+                card.addEventListener("click", () => viewRecipe(recipe.id));
 
-            // click heart = toggle favorite ONLY
-            const heartEl = card.querySelector(".fav-heart");
-            heartEl.addEventListener("click", (evt) => {
-                evt.stopPropagation(); // don't navigate
-                toggleFavorite(recipe, heartEl);
+                // click heart = toggle favorite ONLY
+                const heartEl = card.querySelector(".fav-heart");
+                heartEl.addEventListener("click", (evt) => {
+                    evt.stopPropagation();
+                    toggleFavorite(recipe, heartEl);
+                });
+
+                container.appendChild(card);
             });
-
-            container.appendChild(card);
-        });
+        }
 
         function viewRecipe(id) {
             window.location.href = `recipe.html?id=${id}`;
@@ -209,6 +209,3 @@
             });
         }
     </script>
-</body>
-
-</html>

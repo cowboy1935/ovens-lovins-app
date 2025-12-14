@@ -1,80 +1,105 @@
 // js/api.js
 
 window.api = {
-    base: "",
-
-    async _request(path, options = {}) {
-        const res = await fetch(`${this.base}${path}`, {
-            headers: {
-                "Accept": "application/json",
-                ...(options.headers || {})
-            },
-            ...options
-        });
-
-        // If there's no body (204 etc.)
-        if (res.status === 204) return null;
-
-        let data;
-        try {
-            data = await res.json();
-        } catch {
-            if (!res.ok) {
-                throw new Error(`Request failed: ${res.status}`);
-            }
-            return null;
-        }
-
-        if (!res.ok) {
-            const msg = data?.detail || data?.error || `Request failed: ${res.status}`;
-            throw new Error(msg);
-        }
-
-        return data;
-    },
-
-    // -------- Recipes --------
-
+    // ---- Recipes ----
     async getRecipes() {
-        return this._request("/recipes");
+        const res = await fetch("/recipes");
+        if (!res.ok) throw new Error("Failed to load recipes");
+        return await res.json();
     },
 
     async getRecipe(id) {
-        return this._request(`/recipe/${id}`);
+        const res = await fetch(`/recipe/${id}`);
+        if (!res.ok) throw new Error("Failed to load recipe");
+        return await res.json();
     },
 
-    // Take all ingredients from a recipe into grocery list
+    async favoriteRecipe(id) {
+        const res = await fetch(`/favorite/${id}`, { method: "POST" });
+        if (!res.ok) throw new Error("Failed to favorite");
+        return await res.json();
+    },
+
+    async unfavoriteRecipe(id) {
+        const res = await fetch(`/unfavorite/${id}`, { method: "POST" });
+        if (!res.ok) throw new Error("Failed to unfavorite");
+        return await res.json();
+    },
+
+    async getFavorites() {
+        const res = await fetch("/favorites");
+        if (!res.ok) throw new Error("Failed to load favorites");
+        return await res.json();
+    },
+
+    async deleteRecipe(id) {
+        const res = await fetch(`/recipe/${id}`, { method: "DELETE" });
+        if (!res.ok) throw new Error("Failed to delete recipe");
+        return await res.json();
+    },
+
+    // ---- Grocery ----
     async addIngredientsFromRecipe(id) {
-        return this._request(`/grocery/add_from_recipe/${id}`, {
+        const res = await fetch(`/grocery/add_from_recipe/${id}`, {
             method: "POST"
         });
+        if (!res.ok) throw new Error("Failed to add from recipe");
+        return await res.json();
     },
 
-    // -------- Grocery --------
-
     async getGroceryList() {
-        return this._request("/grocery/list");
+        const res = await fetch("/grocery/list");
+        if (!res.ok) throw new Error("Failed to load grocery list");
+        return await res.json();
+    },
+
+    async addGrocery(item) {
+        const res = await fetch("/grocery", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(item)
+        });
+        if (!res.ok) throw new Error("Failed to add grocery item");
+        return await res.json();
+    },
+
+    async checkGrocery(id) {
+        const res = await fetch(`/grocery/check/${id}`, { method: "POST" });
+        if (!res.ok) throw new Error("Failed to check grocery item");
+        return await res.json();
     },
 
     async deleteGrocery(id) {
-        return this._request(`/grocery/delete/${id}`, {
+        const res = await fetch(`/grocery/delete/${id}`, { method: "DELETE" });
+        if (!res.ok) throw new Error("Failed to delete grocery item");
+        return await res.json();
+    },
+
+    // ---- Photos ----
+    async getRecipeImages(recipeId) {
+        const res = await fetch(`/recipe/${recipeId}/images`);
+        if (!res.ok) throw new Error("Failed to load images");
+        return await res.json();
+    },
+
+    async uploadRecipeImage(recipeId, file, caption = "") {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("caption", caption);
+
+        const res = await fetch(`/recipe/${recipeId}/upload_image`, {
+            method: "POST",
+            body: formData
+        });
+        if (!res.ok) throw new Error("Failed to upload image");
+        return await res.json();
+    },
+
+    async deleteRecipeImage(imageId) {
+        const res = await fetch(`/recipe/images/${imageId}`, {
             method: "DELETE"
         });
-    },
-
-    // Optional helpers if you want them:
-
-    async addGroceryItem(ingredient_name, quantity = null, unit = null) {
-        return this._request("/grocery", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ingredient_name, quantity, unit })
-        });
-    },
-
-    async checkGroceryItem(id) {
-        return this._request(`/grocery/check/${id}`, {
-            method: "POST"
-        });
+        if (!res.ok) throw new Error("Failed to delete image");
+        return await res.json();
     }
 };

@@ -196,15 +196,24 @@ input:focus {
     border-radius: 10px;
     margin: 10px;
     display: flex;
+    /* key */
     justify-content: space-between;
+    /* text left, buttons right */
     align-items: flex-start;
-    /* top-align the button column */
+    /* buttons pinned to top */
+}
+
+.grocery-card.checked {
+    opacity: 0.4;
+    text-decoration: line-through;
 }
 
 /* Text takes the flexible space */
 .grocery-text {
     flex: 1;
     padding-right: 8px;
+    word-break: break-word;
+    /* long text wraps clean */
 }
 
 /* Buttons are always stacked vertically */
@@ -213,11 +222,6 @@ input:focus {
     flex-direction: column;
     /* 👈 this forces vertical */
     gap: 6px;
-}
-
-.grocery-card.checked {
-    opacity: 0.4;
-    text-decoration: line-through;
 }
 
 /* Make the buttons square-ish and centered */
@@ -233,7 +237,6 @@ input:focus {
     font-size: 1rem;
     border-radius: 8px;
     cursor: pointer;
-    margin-left: 6px;
 }
 
 .grocery-btn:hover {

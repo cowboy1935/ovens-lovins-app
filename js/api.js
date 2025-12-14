@@ -1,105 +1,105 @@
-// js/api.js
+(function () {
+    const USER_KEY = "ol_user_id";
 
-window.api = {
-    // ---- Recipes ----
-    async getRecipes() {
-        const res = await fetch("/recipes");
-        if (!res.ok) throw new Error("Failed to load recipes");
-        return await res.json();
-    },
-
-    async getRecipe(id) {
-        const res = await fetch(`/recipe/${id}`);
-        if (!res.ok) throw new Error("Failed to load recipe");
-        return await res.json();
-    },
-
-    async favoriteRecipe(id) {
-        const res = await fetch(`/favorite/${id}`, { method: "POST" });
-        if (!res.ok) throw new Error("Failed to favorite");
-        return await res.json();
-    },
-
-    async unfavoriteRecipe(id) {
-        const res = await fetch(`/unfavorite/${id}`, { method: "POST" });
-        if (!res.ok) throw new Error("Failed to unfavorite");
-        return await res.json();
-    },
-
-    async getFavorites() {
-        const res = await fetch("/favorites");
-        if (!res.ok) throw new Error("Failed to load favorites");
-        return await res.json();
-    },
-
-    async deleteRecipe(id) {
-        const res = await fetch(`/recipe/${id}`, { method: "DELETE" });
-        if (!res.ok) throw new Error("Failed to delete recipe");
-        return await res.json();
-    },
-
-    // ---- Grocery ----
-    async addIngredientsFromRecipe(id) {
-        const res = await fetch(`/grocery/add_from_recipe/${id}`, {
-            method: "POST"
-        });
-        if (!res.ok) throw new Error("Failed to add from recipe");
-        return await res.json();
-    },
-
-    async getGroceryList() {
-        const res = await fetch("/grocery/list");
-        if (!res.ok) throw new Error("Failed to load grocery list");
-        return await res.json();
-    },
-
-    async addGrocery(item) {
-        const res = await fetch("/grocery", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(item)
-        });
-        if (!res.ok) throw new Error("Failed to add grocery item");
-        return await res.json();
-    },
-
-    async checkGrocery(id) {
-        const res = await fetch(`/grocery/check/${id}`, { method: "POST" });
-        if (!res.ok) throw new Error("Failed to check grocery item");
-        return await res.json();
-    },
-
-    async deleteGrocery(id) {
-        const res = await fetch(`/grocery/delete/${id}`, { method: "DELETE" });
-        if (!res.ok) throw new Error("Failed to delete grocery item");
-        return await res.json();
-    },
-
-    // ---- Photos ----
-    async getRecipeImages(recipeId) {
-        const res = await fetch(`/recipe/${recipeId}/images`);
-        if (!res.ok) throw new Error("Failed to load images");
-        return await res.json();
-    },
-
-    async uploadRecipeImage(recipeId, file, caption = "") {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("caption", caption);
-
-        const res = await fetch(`/recipe/${recipeId}/upload_image`, {
-            method: "POST",
-            body: formData
-        });
-        if (!res.ok) throw new Error("Failed to upload image");
-        return await res.json();
-    },
-
-    async deleteRecipeImage(imageId) {
-        const res = await fetch(`/recipe/images/${imageId}`, {
-            method: "DELETE"
-        });
-        if (!res.ok) throw new Error("Failed to delete image");
-        return await res.json();
+    function getUserId() {
+        let id = localStorage.getItem(USER_KEY);
+        if (!id) {
+            if (window.crypto && crypto.randomUUID) {
+                id = crypto.randomUUID();
+            } else {
+                id = "user-" + Date.now() + "-" + Math.random().toString(16).slice(2);
+            }
+            localStorage.setItem(USER_KEY, id);
+        }
+        return id;
     }
-};
+
+    async function apiFetch(path, options = {}) {
+        const userId = getUserId();
+        const headers = {
+            ...(options.headers || {}),
+            "X-User-Id": userId
+        };
+
+        const res = await fetch(path, { ...options, headers });
+        const text = await res.text();
+
+        if (!res.ok) {
+            console.error("API error:", path, res.status, text);
+            throw new Error(`Request failed: ${res.status}`);
+        }
+
+        try {
+            return text ? JSON.parse(text) : null;
+        } catch {
+            return text;
+        }
+    }
+
+    const api = {
+        getUserId,
+
+        // Recipes
+        getRecipes() {
+            return apiFetch("/recipes");
+        },
+        getRecipe(id) {
+            return apiFetch(`/recipe/${id}`);
+        },
+        favoriteRecipe(id) {
+            return apiFetch(`/favorite/${id}`, { method: "POST" });
+        },
+        unfavoriteRecipe(id) {
+            return apiFetch(`/unfavorite/${id}`, { method: "POST" });
+        },
+        getFavorites() {
+            return apiFetch("/favorites");
+        },
+        deleteRecipe(id) {
+            return apiFetch(`/recipe/${id}`, { method: "DELETE" });
+        },
+
+        // Grocery
+        addIngredientsFromRecipe(id) {
+            return apiFetch(`/grocery/add_from_recipe/${id}`, { method: "POST" });
+        },
+        getGroceryList() {
+            return apiFetch("/grocery/list");
+        },
+        addGrocery(item) {
+            return apiFetch("/grocery", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(item)
+            });
+        },
+        checkGrocery(id) {
+            return apiFetch(`/grocery/check/${id}`, { method: "POST" });
+        },
+        deleteGrocery(id) {
+            return apiFetch(`/grocery/delete/${id}`, { method: "DELETE" });
+        },
+
+        // Photos
+        getRecipeImages(recipeId) {
+            return apiFetch(`/recipe/${recipeId}/images`);
+        },
+        uploadRecipeImage(recipeId, file, caption = "") {
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("caption", caption);
+
+            return apiFetch(`/recipe/${recipeId}/upload_image`, {
+                method: "POST",
+                body: formData
+            });
+        },
+        deleteRecipeImage(imageId) {
+            return apiFetch(`/recipe/images/${imageId}`, {
+                method: "DELETE"
+            });
+        }
+    };
+
+    window.api = api;
+})();

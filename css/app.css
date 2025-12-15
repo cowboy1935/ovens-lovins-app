@@ -59,6 +59,30 @@ h3 {
 }
 
 /* --------------------------
+   TOAST
+--------------------------- */
+.toast {
+    position: fixed;
+    left: 50%;
+    bottom: 20px;
+    transform: translateX(-50%) translateY(10px);
+    background: rgba(0, 0, 0, 0.9);
+    color: #f2f2f2;
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease-out, transform 0.18s ease-out;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* --------------------------
    FILTER BAR
 --------------------------- */
 .filter-bar {
@@ -200,7 +224,7 @@ input:focus {
 
 .btn-secondary {
     background: #333;
-    color: #f2f2f2;
+    color: #eee;
 }
 
 .btn-secondary:hover {
@@ -363,6 +387,59 @@ input:focus {
     color: #777;
     margin-top: 4px;
     min-height: 1em;
+}
+
+/* --------------------------
+   NOTES SECTION
+--------------------------- */
+.notes-section {
+    margin-top: 20px;
+    background: #151515;
+    border-radius: 12px;
+    border: 1px solid #252525;
+    padding: 12px 14px 16px;
+}
+
+.notes-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.notes-title {
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+.notes-meta {
+    font-size: 0.75rem;
+    color: #888;
+    white-space: nowrap;
+}
+
+.notes-helper {
+    color: #aaa;
+    font-size: 0.85rem;
+    margin: 0 0 8px 0;
+}
+
+#notes-box {
+    width: 100%;
+    min-height: 90px;
+    background: #111;
+    border-radius: 10px;
+    border: 1px solid #333;
+    padding: 10px;
+    font-size: 0.95rem;
+    color: #eee;
+    resize: vertical;
+}
+
+#notes-box:focus {
+    outline: none;
+    border-color: #f5c236;
 }
 
 /* --------------------------

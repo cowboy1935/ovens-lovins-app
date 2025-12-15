@@ -19,6 +19,7 @@
         <button class="nav-btn" onclick="window.location.href='upload.html'">Add Recipe</button>
     </div>
 
+    <div id="toast" class="toast"></div>
     <main style="padding: 15px;">
         <h1 id="recipe-title" class="page-title"></h1>
 
@@ -53,13 +54,15 @@
         </section>
 
         <section class="notes-section">
-            <h2>Your Notes</h2>
+            <div class="notes-header">
+                <h2 class="notes-title">Your Notes</h2>
+                <div class="notes-meta" id="notes-meta">Not saved yet</div>
+            </div>
             <p class="notes-helper">
-                These notes stay on this device only. Use them for timing tweaks,
-                substitutions, or how <em>you</em> like to do it.
+                These notes stay on this device only. Jot timing tweaks, swaps, or reminders.
+                The full official instructions live on the original site.
             </p>
-            <textarea id="notes-box" class="notes-textarea" rows="5"></textarea>
-            <div id="notes-status" class="notes-status"></div>
+            <textarea id="notes-box" rows="5"></textarea>
         </section>
 
         <section style="margin-top: 20px;">
@@ -109,12 +112,13 @@
             if (!currentRecipe) return;
             try {
                 await window.api.addIngredientsFromRecipe(currentRecipe.id);
-                alert("Ingredients added to grocery list.");
+                showToast("Ingredients added to grocery list");
             } catch (err) {
                 console.error("Failed to add ingredients:", err);
-                alert("Could not add ingredients to grocery list.");
+                showToast("Could not add ingredients");
             }
         }
+
 
         async function shareRecipe() {
             if (!currentRecipe) return;
@@ -148,40 +152,43 @@
             }
         }
 
-        // -------- Notes (localStorage) --------
-        let notesSaveTimeout = null;
+        function formatNotesDate(iso) {
+            if (!iso) return "Not saved yet";
+            const d = new Date(iso);
+            if (Number.isNaN(d.getTime())) return "Last updated: unknown";
+            return "Last updated: " + d.toLocaleString();
+        }
 
+        // -------- Notes (localStorage) --------
         function loadNotes(recipeId) {
             const key = `recipe_notes_${recipeId}`;
+            const timeKey = `recipe_notes_${recipeId}_updated`;
             const saved = localStorage.getItem(key);
-            const box = document.getElementById("notes-box");
-            const status = document.getElementById("notes-status");
+            const savedTime = localStorage.getItem(timeKey);
 
             if (saved) {
-                box.value = saved;
-                status.textContent = "Last saved on this device.";
-            } else {
-                status.textContent = "Start typing to save notes automatically.";
+                document.getElementById("notes-box").value = saved;
+            }
+
+            const metaEl = document.getElementById("notes-meta");
+            if (metaEl) {
+                metaEl.textContent = formatNotesDate(savedTime);
             }
         }
 
         function saveNotes(recipeId) {
             const key = `recipe_notes_${recipeId}`;
-            const box = document.getElementById("notes-box");
-            const status = document.getElementById("notes-status");
-            const value = box.value;
+            const timeKey = `recipe_notes_${recipeId}_updated`;
+            const value = document.getElementById("notes-box").value;
 
             localStorage.setItem(key, value);
-            status.textContent = "Saved ✔";
+            const nowIso = new Date().toISOString();
+            localStorage.setItem(timeKey, nowIso);
 
-            if (notesSaveTimeout) clearTimeout(notesSaveTimeout);
-            notesSaveTimeout = setTimeout(() => {
-                if (!value.trim()) {
-                    status.textContent = "Start typing to save notes automatically.";
-                } else {
-                    status.textContent = "Last saved on this device.";
-                }
-            }, 1500);
+            const metaEl = document.getElementById("notes-meta");
+            if (metaEl) {
+                metaEl.textContent = formatNotesDate(nowIso);
+            }
         }
 
         // -------- Instructions (Hybrid) --------
@@ -223,6 +230,59 @@
                 } else {
                     cookSection.innerHTML = "<p>No cooking instructions provided.</p>";
                 }
+            }
+        }
+
+        function showToast(message) {
+            const el = document.getElementById("toast");
+            if (!el) return;
+            el.textContent = message;
+            el.classList.add("show");
+            clearTimeout(el._hideTimer);
+            el._hideTimer = setTimeout(() => {
+                el.classList.remove("show");
+            }, 2000);
+        }
+
+        function copyShareLink(url) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(url)
+                    .then(() => showToast("Link copied to clipboard"))
+                    .catch(err => {
+                        console.error("Clipboard failed:", err);
+                        window.prompt("Copy this link:", url);
+                    });
+            } else {
+                window.prompt("Copy this link:", url);
+            }
+        }
+
+        function setupShareButton(recipe) {
+            const btn = document.getElementById("share-recipe-btn");
+            if (!btn) return;
+
+            const shareUrl = `${window.location.origin}/recipe.html?id=${recipe.id}`;
+            const shareText = `${recipe.title} – from Ovens Lovin's`;
+
+            if (navigator.share) {
+                btn.style.display = "inline-block";
+                btn.onclick = async () => {
+                    try {
+                        await navigator.share({
+                            title: recipe.title,
+                            text: shareText,
+                            url: shareUrl
+                        });
+                    } catch (err) {
+                        if (err && err.name === "AbortError") return;
+                        console.error("Share failed:", err);
+                        copyShareLink(shareUrl);
+                    }
+                };
+            } else {
+                // Fallback: copy or prompt
+                btn.style.display = "inline-block";
+                btn.onclick = () => copyShareLink(shareUrl);
             }
         }
 
@@ -355,6 +415,11 @@
                 const recipe = await window.api.getRecipe(id);
                 currentRecipe = recipe;
 
+                loadNotes(recipe.id);
+                document.getElementById("notes-box").addEventListener("input", () => {
+                    saveNotes(recipe.id);
+                });
+
                 document.getElementById("recipe-title").textContent = recipe.title;
                 document.getElementById("delete-recipe-btn").onclick = async () => {
                     if (!currentRecipe) return;
@@ -389,6 +454,7 @@
                 renderIngredients(recipe);
                 renderInstructions(recipe);
                 setupSourceButton(recipe);
+                setupShareButton(recipe);
                 loadNotes(recipe.id);
                 document.getElementById("notes-box").addEventListener("input", () => {
                     saveNotes(recipe.id);

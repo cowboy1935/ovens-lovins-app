@@ -63,6 +63,7 @@
     <script>
         let allRecipes = [];
         let currentQuickFilter = "all";
+        let filtered = Array.isArray(allRecipes) ? allRecipes.slice() : [];
 
         // -------- CONTINUE BUTTON --------
         function enableContinueButton() {
@@ -144,6 +145,25 @@
             }
         }
 
+        function populateCategoryFilter(recipes) {
+            const select = document.getElementById("categoryFilter");
+            if (!select) return;
+
+            const seen = new Set();
+            select.innerHTML = '<option value="">All Categories</option>';
+
+            recipes.forEach(r => {
+                if (!r.category) return;
+                if (seen.has(r.category)) return;
+                seen.add(r.category);
+
+                const opt = document.createElement("option");
+                opt.value = r.category;
+                opt.textContent = r.category;
+                select.appendChild(opt);
+            });
+        }
+
         // -------- LOAD ALL RECIPES --------
         async function init() {
             enableContinueButton();
@@ -151,7 +171,7 @@
 
             try {
                 allRecipes = await window.api.getRecipes();
-                buildCategoryFilter();
+                populateCategoryFilter(allRecipes);
                 renderRecipes();
             } catch (error) {
                 console.error(error);
@@ -167,22 +187,27 @@
             const search = document.getElementById("searchBox").value.toLowerCase();
             const container = document.getElementById("recipe-list");
 
-            let filtered = Array.isArray(allRecipes) ? allRecipes.slice() : [];
+            // Start from all recipes
+            let filtered = window.allRecipes ? window.allRecipes.slice() : [];
 
+            // Meal type filter
             if (mealType) {
                 filtered = filtered.filter(r => r.meal_type === mealType);
             }
 
+            // Category filter
             if (category) {
                 filtered = filtered.filter(r => r.category === category);
             }
 
+            // Search filter
             if (search.trim()) {
                 filtered = filtered.filter(r =>
                     r.title.toLowerCase().includes(search)
                 );
             }
 
+            // Quick chips: favorites / chef / budget
             if (currentQuickFilter === "favorites") {
                 filtered = filtered.filter(r => r.is_favorite);
             } else if (currentQuickFilter === "chef") {
@@ -195,10 +220,11 @@
 
             if (!filtered.length) {
                 container.innerHTML =
-                    "<p style='color:#777; padding:10px;'>No recipes match those filters. Try clearing search or switching filters.</p>";
+                    "<p style='color:#777; padding:10px;'>No recipes match those filters. Try clearing search or switching meal type.</p>";
                 return;
             }
 
+            // Build cards
             filtered.forEach(recipe => {
                 const card = document.createElement("div");
                 card.className = "recipe-card";
@@ -215,8 +241,10 @@
                     </div>
                 `;
 
+                // Click card = open recipe
                 card.addEventListener("click", () => viewRecipe(recipe.id));
 
+                // Click heart = toggle favorite only
                 const heartEl = card.querySelector(".fav-heart");
                 heartEl.addEventListener("click", (evt) => {
                     evt.stopPropagation();

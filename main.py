@@ -5,7 +5,7 @@
 
 from datetime import datetime
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, Header
+from fastapi import FastAPI, HTTPException, UploadFile, File, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -126,6 +126,43 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
+@app.middleware("http")
+async def add_security_and_cache_headers(request: Request, call_next):
+    """
+    Add a few standard security headers and sane Cache-Control defaults.
+    This runs for EVERY response (HTML, API, static files, etc.).
+    """
+    response = await call_next(request)
+
+    # ---- Security headers ----
+    # Tell browsers not to guess content types
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    # Don’t allow the app to be framed by other sites
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    # Reasonable referrer policy for a webapp
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+
+    # ---- Cache rules ----
+    path = request.url.path
+
+    # For HTML pages and root: don't cache aggressively
+    if path == "/" or path.endswith(".html"):
+        # Browser can keep a copy but must revalidate / not reuse stale stuff
+        response.headers.setdefault(
+            "Cache-Control",
+            "no-cache, no-store, must-revalidate"
+        )
+        response.headers.setdefault("Pragma", "no-cache")
+        response.headers.setdefault("Expires", "0")
+    else:
+        # For CSS/JS/icons/API responses we’re okay with short caching
+        # (Service worker still controls most of this.)
+        response.headers.setdefault(
+            "Cache-Control",
+            "public, max-age=3600"
+        )
+
+    return response
 
 # -----------------------------------------
 # PWA FILES (Manifest & Service Worker)

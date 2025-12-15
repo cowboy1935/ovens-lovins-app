@@ -348,18 +348,20 @@ def get_favorites(x_user_id: Optional[str] = Header(default=None)):
     rows = cur.fetchall()
     conn.close()
 
-    return [
-        {
-            "id": r["id"],
-            "title": r["title"],
-            "meal_type": r["meal_type"],
-            "category": r["category"],
-            "source_type": r["source_type"],
-            "is_favorite": True
-        }
-        for r in rows
-    ]
-
+    result = []
+    for r in rows:
+        cat = r["category"] if r["category"] else auto_category(r["title"])
+        result.append(
+            {
+                "id": r["id"],
+                "title": r["title"],
+                "meal_type": r["meal_type"],
+                "category": cat,
+                "source_type": r["source_type"],
+                "is_favorite": True,
+            }
+        )
+    return result
 
 # -----------------------------------------
 # RECIPE ENDPOINTS
@@ -504,11 +506,13 @@ def get_recipe(recipe_id: int, x_user_id: Optional[str] = Header(default=None)):
 
     conn.close()
 
+    cat = recipe["category"] if recipe["category"] else auto_category(recipe["title"])
+
     return RecipeOut(
         id=recipe["id"],
         title=recipe["title"],
         meal_type=recipe["meal_type"],
-        category=recipe["category"],
+        category=cat,
         source_type=recipe["source_type"],
         is_budget_friendly=bool(recipe["is_budget_friendly"]),
         base_recipe_id=recipe["base_recipe_id"],

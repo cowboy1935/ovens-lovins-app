@@ -38,6 +38,11 @@
             <option value="Snack">Snack</option>
         </select>
 
+        <select id="categoryFilter" onchange="renderRecipes()">
+            <option value="">All Categories</option>
+            <!-- options will be filled from JS -->
+        </select>
+
         <input id="searchBox" type="text" placeholder="Search…" oninput="renderRecipes()" />
     </div>
 
@@ -85,10 +90,35 @@
                 });
             });
 
-            // If we came from the nav "Favorites" button
             if (window.location.hash === "#favorites") {
                 setQuickFilter("favorites");
             }
+        }
+
+        // -------- BUILD CATEGORY DROPDOWN --------
+        function buildCategoryFilter() {
+            const sel = document.getElementById("categoryFilter");
+            if (!sel) return;
+
+            // keep the first option ("All Categories"), remove the rest
+            while (sel.options.length > 1) {
+                sel.remove(1);
+            }
+
+            const cats = Array.from(
+                new Set(
+                    (allRecipes || [])
+                        .map(r => r.category)
+                        .filter(Boolean)
+                )
+            ).sort((a, b) => a.localeCompare(b));
+
+            cats.forEach(cat => {
+                const opt = document.createElement("option");
+                opt.value = cat;
+                opt.textContent = cat;
+                sel.appendChild(opt);
+            });
         }
 
         // -------- FAVORITE TOGGLE --------
@@ -121,6 +151,7 @@
 
             try {
                 allRecipes = await window.api.getRecipes();
+                buildCategoryFilter();
                 renderRecipes();
             } catch (error) {
                 console.error(error);
@@ -132,14 +163,18 @@
         // -------- RENDER LIST --------
         function renderRecipes() {
             const mealType = document.getElementById("mealTypeFilter").value;
+            const category = document.getElementById("categoryFilter").value;
             const search = document.getElementById("searchBox").value.toLowerCase();
             const container = document.getElementById("recipe-list");
 
-            // start from all recipes
             let filtered = Array.isArray(allRecipes) ? allRecipes.slice() : [];
 
             if (mealType) {
                 filtered = filtered.filter(r => r.meal_type === mealType);
+            }
+
+            if (category) {
+                filtered = filtered.filter(r => r.category === category);
             }
 
             if (search.trim()) {
@@ -160,7 +195,7 @@
 
             if (!filtered.length) {
                 container.innerHTML =
-                    "<p style='color:#777; padding:10px;'>No recipes match those filters. Try clearing search or switching meal type.</p>";
+                    "<p style='color:#777; padding:10px;'>No recipes match those filters. Try clearing search or switching filters.</p>";
                 return;
             }
 
@@ -180,10 +215,8 @@
                     </div>
                 `;
 
-                // click card = open recipe
                 card.addEventListener("click", () => viewRecipe(recipe.id));
 
-                // click heart = toggle favorite ONLY
                 const heartEl = card.querySelector(".fav-heart");
                 heartEl.addEventListener("click", (evt) => {
                     evt.stopPropagation();
